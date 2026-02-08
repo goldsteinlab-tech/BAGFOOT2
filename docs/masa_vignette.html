@@ -229,15 +229,15 @@ text-decoration: underline;
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
 </div>
-<div id="input" class="section level2">
-<h2>Input:</h2>
+<div id="input-data" class="section level2">
+<h2>Input data:</h2>
 <ul>
 <li><p>BAM files (aligned ATAC-seq reads)</p></li>
 <li><p>MACS2 output peak files (in BED or narrowPeak format)</p></li>
 </ul>
 </div>
-<div id="core-functions" class="section level2">
-<h2>Core Functions:</h2>
+<div id="core-methodological-components" class="section level2">
+<h2>Core Methodological Components:</h2>
 <p>MASA integrates differential accessibility, motif enrichment, and footprinting analysis to infer transcription factor activity changes between two conditions.</p>
 <p>Differential accessible regions and motif enrichment: MASA identifies deferentially accessible peaks using HOMER and performs motif enrichment analysis on these regions. Enriched motifs are incorporated into the result files.</p>
 <p>Footprinting and accessibility quantification. MASA calculates flanking accessibility and transcription factor footprinting metrics from ATAC-seq BAM files, comparing them between the two conditions to detect differential TF activity.</p>
@@ -246,8 +246,8 @@ text-decoration: underline;
 <div id="how-does-masa-work" class="section level2">
 <h2>How Does MASA Work?</h2>
 </div>
-<div id="data-processing" class="section level2">
-<h2>Data Processing:</h2>
+<div id="data-processing-steps" class="section level2">
+<h2>Data Processing Steps:</h2>
 <p>Reads BAM files and identifies accessible chromatin regions using MACS2 peak files.</p>
 <p>Calculates chromatin accessibility and TF footprints for each condition.</p>
 <p>Computes the difference (delta) in accessibility and footprinting for each TF motif between the two conditions.</p>
@@ -302,8 +302,8 @@ text-decoration: underline;
 <p>In the couples section, always list the control condition first, followed by a hyphen (-), then the experimental condition (e.g., control-treated).</p>
 <p>Do NOT use underscores (_)!</p>
 </div>
-<div id="pre-processing" class="section level2">
-<h2>Pre-processing</h2>
+<div id="pre-processing-overview" class="section level2">
+<h2>Pre-processing Overview</h2>
 </div>
 <div id="initial-processing-and-file-generation" class="section level2">
 <h2>Initial Processing and File Generation</h2>
@@ -319,8 +319,8 @@ text-decoration: underline;
 <h3>Bias Factor Application:</h3>
 <p>The O/E ratios serve as bias correction factors to derive expected count per position; observed counts are normalized by these expected counts. MASA applies these factors to adjust the raw ATAC-seq signal, normalizing for sequence bias before any downstream analysis (such as accessibility, footprinting, and delta calculation).</p>
 </div>
-<div id="step-by-step-workflow" class="section level3">
-<h3>Step-by-Step Workflow</h3>
+<div id="conceptual-explanation-with-annotated-example-code" class="section level3">
+<h3>Conceptual Explanation with Annotated Example Code</h3>
 <div id="generate-nucleotide-code-files-per-chromosome" class="section level4">
 <h4>1. Generate Nucleotide Code Files (Per Chromosome)</h4>
 <p>For each chromosome in the reference genome (mm9, mm10, hg19, hg38), MASA generates nucleotide code files (nuccode files) that encode the hexamer (6-mer) sequence at each genomic position. These files serve as a lookup table, allowing the pipeline to quickly identify the sequence context at any position during bias correction and footprinting analysis.</p>
@@ -427,8 +427,8 @@ text-decoration: underline;
 </table>
 </div>
 </div>
-<div id="running-the-script" class="section level2">
-<h2>Running the script</h2>
+<div id="example-script-illustrating-the-workflow" class="section level2">
+<h2>Example Script Illustrating the Workflow</h2>
 <p>Your script should be in the directory bg_dir.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a></span>
 <span id="cb2-2"><a href="#cb2-2"></a><span class="kw">library</span>(masa)</span>
@@ -561,8 +561,8 @@ text-decoration: underline;
 <span id="cb3-96"><a href="#cb3-96"></a>  )</span>
 <span id="cb3-97"><a href="#cb3-97"></a>}</span></code></pre></div>
 </div>
-<div id="homer-differential-atac-seq-analysis-motif-enrichment" class="section level2">
-<h2>HOMER : Differential ATAC-seq analysis &amp; motif enrichment</h2>
+<div id="homer-integration-differential-atac-seq-and-motif-enrichment" class="section level2">
+<h2>HOMER Integration: Differential ATAC-seq and Motif Enrichment</h2>
 </div>
 <div id="run-homer" class="section level2">
 <h2>Run HOMER</h2>
@@ -613,8 +613,8 @@ text-decoration: underline;
 <span id="cb4-30"><a href="#cb4-30"></a>group2 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;fasted&quot;</span>, <span class="st">&quot;fasted&quot;</span>, <span class="st">&quot;fasted&quot;</span>) <span class="co"># 3 replicas </span></span>
 <span id="cb4-31"><a href="#cb4-31"></a></span>
 <span id="cb4-32"><a href="#cb4-32"></a><span class="co"># Reformat the merged peak file for HOMER</span></span>
-<span id="cb4-33"><a href="#cb4-33"></a>input_file1 &lt;-<span class="st"> </span><span class="kw">file.path</span>(bg_dir, <span class="st">&quot;pooled_fasted_hotspot.csv&quot;</span>)</span>
-<span id="cb4-34"><a href="#cb4-34"></a>output_file1 &lt;-<span class="st"> </span><span class="kw">file.path</span>(bg_dir, <span class="st">&quot;pooled_fasted_hotspot_modify.txt&quot;</span>)</span>
+<span id="cb4-33"><a href="#cb4-33"></a>input_file1 &lt;-<span class="st"> </span><span class="kw">file.path</span>(bg_dir, <span class="st">&quot;pooled_fed_fasted_hotspot.csv&quot;</span>)</span>
+<span id="cb4-34"><a href="#cb4-34"></a>output_file1 &lt;-<span class="st"> </span><span class="kw">file.path</span>(bg_dir, <span class="st">&quot;pooled_fed_fasted_hotspot_modify.txt&quot;</span>)</span>
 <span id="cb4-35"><a href="#cb4-35"></a></span>
 <span id="cb4-36"><a href="#cb4-36"></a><span class="kw">process_hotspot_file</span>(</span>
 <span id="cb4-37"><a href="#cb4-37"></a>  input_file1,</span>

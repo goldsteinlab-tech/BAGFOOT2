@@ -22,13 +22,13 @@ Motif-Associated Signs of Activity (MASA)  is a computational tool designed to p
 
 ## Introduction
 
-## Input:
+## Input data:
 
 - BAM files (aligned ATAC-seq reads)
 
 - MACS2 output peak files (in BED or narrowPeak format)
 
-## Core Functions:
+## Core Methodological Components:
 
 MASA integrates differential accessibility, motif enrichment, and footprinting analysis to infer transcription factor activity changes between two conditions.
 
@@ -45,7 +45,7 @@ MASA also provides a bagplot visualization summarizing differential footprint de
 
 ## How Does MASA Work?
 
-## Data Processing:
+## Data Processing Steps:
 
 Reads BAM files and identifies accessible chromatin regions using MACS2 peak files.
 
@@ -118,7 +118,7 @@ In the couples section, always list the control condition first, followed by a h
 
 Do NOT use underscores (_)!
 
-## Pre-processing
+## Pre-processing Overview
 
 ## Initial Processing and File Generation
 This section describes the preprocessing steps required for each condition before downstream analysis. 
@@ -131,7 +131,7 @@ Using the BAM files from ATAC-seq experiments, MASA calculates the observed freq
 The O/E ratios serve as bias correction factors to derive expected count per position; observed counts are normalized by these expected counts. MASA applies these factors to adjust the raw ATAC-seq signal, normalizing for sequence bias before any downstream analysis (such as accessibility, footprinting, and delta calculation).
 
 
-### Step-by-Step Workflow
+### Conceptual Explanation with Annotated Example Code
 
 #### 1. Generate Nucleotide Code Files (Per Chromosome)
 
@@ -220,7 +220,7 @@ Summary Table:
 ```
 
  
-## Running the script
+## Example Script Illustrating the Workflow
 
 Your script should be in the directory bg_dir.
 
@@ -402,7 +402,7 @@ for (c in couples) {
 
 ```
 
-## HOMER : Differential ATAC-seq analysis & motif enrichment
+## HOMER Integration: Differential ATAC-seq and Motif Enrichment
   
 ## Run HOMER
 
@@ -467,8 +467,8 @@ group1 <- c("fed", "fed", "fed") # 3 replicas
 group2 <- c("fasted", "fasted", "fasted") # 3 replicas 
 
 # Reformat the merged peak file for HOMER
-input_file1 <- file.path(bg_dir, "pooled_fasted_hotspot.csv")
-output_file1 <- file.path(bg_dir, "pooled_fasted_hotspot_modify.txt")
+input_file1 <- file.path(bg_dir, "pooled_fed_fasted_hotspot.csv")
+output_file1 <- file.path(bg_dir, "pooled_fed_fasted_hotspot_modify.txt")
 
 process_hotspot_file(
   input_file1,

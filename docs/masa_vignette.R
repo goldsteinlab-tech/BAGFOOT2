@@ -220,8 +220,8 @@ knitr::kable(
 # group2 <- c("fasted", "fasted", "fasted") # 3 replicas
 # 
 # # Reformat the merged peak file for HOMER
-# input_file1 <- file.path(bg_dir, "pooled_fasted_hotspot.csv")
-# output_file1 <- file.path(bg_dir, "pooled_fasted_hotspot_modify.txt")
+# input_file1 <- file.path(bg_dir, "pooled_fed_fasted_hotspot.csv")
+# output_file1 <- file.path(bg_dir, "pooled_fed_fasted_hotspot_modify.txt")
 # 
 # process_hotspot_file(
 #   input_file1,
