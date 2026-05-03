@@ -13,7 +13,7 @@
 <meta name="author" content="Leslie Cohen" />
 
 
-<title>Motif-Associated Signs of Activity (MASA)</title>
+<title>Motif-Associated Signs of Activity (TIGER)</title>
 
 <script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
 // v0.0.1
@@ -220,12 +220,12 @@ text-decoration: underline;
 
 
 
-<h1 class="title toc-ignore">Motif-Associated Signs of Activity (MASA)</h1>
+<h1 class="title toc-ignore">Motif-Associated Signs of Activity (TIGER)</h1>
 <h4 class="author">Leslie Cohen</h4>
 
 
 
-<p>Motif-Associated Signs of Activity (MASA) is a computational tool designed to predict which transcription factors (TFs) change their activity between two experimental conditions using ATAC-seq data. MASA is intended for biologists and bioinformaticians interested in chromatin accessibility and transcriptional regulation.</p>
+<p>Motif-Associated Signs of Activity (TIGER) is a computational tool designed to predict which transcription factors (TFs) change their activity between two experimental conditions using ATAC-seq data. TIGER is intended for biologists and bioinformaticians interested in chromatin accessibility and transcriptional regulation.</p>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
 </div>
@@ -238,13 +238,13 @@ text-decoration: underline;
 </div>
 <div id="core-methodological-components" class="section level2">
 <h2>Core Methodological Components:</h2>
-<p>MASA integrates differential accessibility, motif enrichment, and footprinting analysis to infer transcription factor activity changes between two conditions.</p>
-<p>Differential accessible regions and motif enrichment: MASA identifies deferentially accessible peaks using HOMER and performs motif enrichment analysis on these regions. Enriched motifs are incorporated into the result files.</p>
-<p>Footprinting and accessibility quantification. MASA calculates flanking accessibility and transcription factor footprinting metrics from ATAC-seq BAM files, comparing them between the two conditions to detect differential TF activity.</p>
-<p>Differential activity scores and visualization Differential scores quantify the change in TF activity between conditions. Results are compiled into a summary table including differential activity values, and statistical significance. MASA also provides a bagplot visualization summarizing differential footprint depth, flanking accessibility, where HOMER-enriched motifs are highlighted.</p>
+<p>TIGER integrates differential accessibility, motif enrichment, and footprinting analysis to infer transcription factor activity changes between two conditions.</p>
+<p>Differential accessible regions and motif enrichment: TIGER identifies deferentially accessible peaks using HOMER and performs motif enrichment analysis on these regions. Enriched motifs are incorporated into the result files.</p>
+<p>Footprinting and accessibility quantification. TIGER calculates flanking accessibility and transcription factor footprinting metrics from ATAC-seq BAM files, comparing them between the two conditions to detect differential TF activity.</p>
+<p>Differential activity scores and visualization Differential scores quantify the change in TF activity between conditions. Results are compiled into a summary table including differential activity values, and statistical significance. TIGER also provides a bagplot visualization summarizing differential footprint depth, flanking accessibility, where HOMER-enriched motifs are highlighted.</p>
 </div>
 <div id="how-does-masa-work" class="section level2">
-<h2>How Does MASA Work?</h2>
+<h2>How Does TIGER Work?</h2>
 </div>
 <div id="data-processing-steps" class="section level2">
 <h2>Data Processing Steps:</h2>
@@ -259,8 +259,8 @@ text-decoration: underline;
 <p>Generates a plot for visualizing the distribution and outliers among TF activity changes.</p>
 </div>
 <div id="masa-project-environment-requirements-and-structure" class="section level2">
-<h2>MASA Project Environment: Requirements and Structure</h2>
-<p>Before running MASA, you must organize your project files in a specific way to ensure smooth operation and reproducibility. Here’s a detailed guide on setting up your environment.</p>
+<h2>TIGER Project Environment: Requirements and Structure</h2>
+<p>Before running TIGER, you must organize your project files in a specific way to ensure smooth operation and reproducibility. Here’s a detailed guide on setting up your environment.</p>
 </div>
 <div id="required-directories" class="section level2">
 <h2>1. Required Directories</h2>
@@ -295,7 +295,7 @@ text-decoration: underline;
 <p>Path to MACS2 peaks directory</p>
 <p>Reference genome version (e.g., mm10, hg38)</p>
 <p>Treatments (all_set): List of all conditions (e.g., treated, control)</p>
-<p>Couples: Define the pairs of conditions you want to compare (for use in MASA)</p>
+<p>Couples: Define the pairs of conditions you want to compare (for use in TIGER)</p>
 </div>
 <div id="important-how-to-define-couples-in-your-project-file" class="section level2">
 <h2>Important: How to Define “couples” in Your Project File</h2>
@@ -313,17 +313,17 @@ text-decoration: underline;
 <h2>ATAC-seq signal normalization</h2>
 <div id="observed-vs.-expected-table" class="section level3">
 <h3>Observed vs. Expected Table:</h3>
-<p>Using the BAM files from ATAC-seq experiments, MASA calculates the observed frequency of each 6-mer at Tn5 insertion sites. It then compares these observed counts to the expected frequencies derived from a genome-wide 6-mer library, generating an observed/expected (O/E) ratio for each 6-mer.</p>
+<p>Using the BAM files from ATAC-seq experiments, TIGER calculates the observed frequency of each 6-mer at Tn5 insertion sites. It then compares these observed counts to the expected frequencies derived from a genome-wide 6-mer library, generating an observed/expected (O/E) ratio for each 6-mer.</p>
 </div>
 <div id="bias-factor-application" class="section level3">
 <h3>Bias Factor Application:</h3>
-<p>The O/E ratios serve as bias correction factors to derive expected count per position; observed counts are normalized by these expected counts. MASA applies these factors to adjust the raw ATAC-seq signal, normalizing for sequence bias before any downstream analysis (such as accessibility, footprinting, and delta calculation).</p>
+<p>The O/E ratios serve as bias correction factors to derive expected count per position; observed counts are normalized by these expected counts. TIGER applies these factors to adjust the raw ATAC-seq signal, normalizing for sequence bias before any downstream analysis (such as accessibility, footprinting, and delta calculation).</p>
 </div>
 <div id="conceptual-explanation-with-annotated-example-code" class="section level3">
 <h3>Conceptual Explanation with Annotated Example Code</h3>
 <div id="generate-nucleotide-code-files-per-chromosome" class="section level4">
 <h4>1. Generate Nucleotide Code Files (Per Chromosome)</h4>
-<p>For each chromosome in the reference genome (mm9, mm10, hg19, hg38), MASA generates nucleotide code files (nuccode files) that encode the hexamer (6-mer) sequence at each genomic position. These files serve as a lookup table, allowing the pipeline to quickly identify the sequence context at any position during bias correction and footprinting analysis.</p>
+<p>For each chromosome in the reference genome (mm9, mm10, hg19, hg38), TIGER generates nucleotide code files (nuccode files) that encode the hexamer (6-mer) sequence at each genomic position. These files serve as a lookup table, allowing the pipeline to quickly identify the sequence context at any position during bias correction and footprinting analysis.</p>
 <p>This pre-processing step is performed once per genome and is reused across all samples and conditions, ensuring efficient and consistent sequence bias correction throughout the analysis.</p>
 </div>
 <div id="generate-bedgraph-files" class="section level4">
@@ -334,8 +334,8 @@ text-decoration: underline;
 </div>
 <div id="hexamer-table-construction" class="section level4">
 <h4>3. Hexamer Table Construction</h4>
-<p>For each condition, MASA builds a hexamer (6-mer) bias table that quantifies sequence-dependent Tn5 cutting preferences.</p>
-<p>Using the nuccode files, MASA assigns to each genomic position the local hexamer sequence. The corresponding BedGraph file provides the number of Tn5 cuts at each position (after strand-specific Tn5 offset correction and duplicate removal). For every hexamer, MASA then:</p>
+<p>For each condition, TIGER builds a hexamer (6-mer) bias table that quantifies sequence-dependent Tn5 cutting preferences.</p>
+<p>Using the nuccode files, TIGER assigns to each genomic position the local hexamer sequence. The corresponding BedGraph file provides the number of Tn5 cuts at each position (after strand-specific Tn5 offset correction and duplicate removal). For every hexamer, TIGER then:</p>
 <ul>
 <li>counts how many times it appears in the genome (GenomicPositionCount), and</li>
 <li>aggregates the observed Tn5 cuts at all positions carrying this hexamer (ObCuts).</li>
@@ -350,7 +350,7 @@ text-decoration: underline;
 <li>a correction factor derived from these quantities.</li>
 </ul>
 <p>This correction factor is used in downstream steps to rescale cut counts and remove intrinsic Tn5 sequence bias, ensuring that the resulting footprinting signal reflects true chromatin protection rather than enzymatic preference.</p>
-<p>One hexamer bias table is generated per condition. For differential footprinting between two conditions (a couple), MASA later merges the per-condition tables into a combined hexamer file (see summary table), so that both conditions are normalized using the same hexamer set and bias estimates.</p>
+<p>One hexamer bias table is generated per condition. For differential footprinting between two conditions (a couple), TIGER later merges the per-condition tables into a combined hexamer file (see summary table), so that both conditions are normalized using the same hexamer set and bias estimates.</p>
 </div>
 </div>
 <div id="output-files" class="section level3">
@@ -386,7 +386,7 @@ text-decoration: underline;
 </tr>
 </tbody>
 </table>
-<p>When comparing two conditions (e.g., control vs treatment), MASA generates additional files that combine information from both samples. These “couple-level” outputs ensure that footprinting and accessibility differences are evaluated on a unified genomic reference.</p>
+<p>When comparing two conditions (e.g., control vs treatment), TIGER generates additional files that combine information from both samples. These “couple-level” outputs ensure that footprinting and accessibility differences are evaluated on a unified genomic reference.</p>
 <p>Summary Table:</p>
 <table>
 <caption>Summary Table</caption>
@@ -420,7 +420,7 @@ text-decoration: underline;
 </tr>
 <tr class="even">
 <td align="left">Peak reformatting</td>
-<td align="center">Hotspot table (MACS2 peaks reformatted to MASA format; one row per peak with placeholder footprint metrics)</td>
+<td align="center">Hotspot table (MACS2 peaks reformatted to TIGER format; one row per peak with placeholder footprint metrics)</td>
 <td align="center">Combined peaks / pooled hotspot (merged hotspot table defining a common peaks universe for both conditions)</td>
 </tr>
 </tbody>
@@ -525,7 +525,7 @@ text-decoration: underline;
 <span id="cb3-60"><a href="#cb3-60"></a>                   <span class="dt">full.names =</span> <span class="ot">TRUE</span>)</span>
 <span id="cb3-61"><a href="#cb3-61"></a><span class="kw">file.remove</span>(temp)</span>
 <span id="cb3-62"><a href="#cb3-62"></a></span>
-<span id="cb3-63"><a href="#cb3-63"></a><span class="co"># Merge files for MASA run</span></span>
+<span id="cb3-63"><a href="#cb3-63"></a><span class="co"># Merge files for TIGER run</span></span>
 <span id="cb3-64"><a href="#cb3-64"></a><span class="cf">for</span> (c <span class="cf">in</span> couples) {</span>
 <span id="cb3-65"><a href="#cb3-65"></a>  <span class="kw">print</span>(c)</span>
 <span id="cb3-66"><a href="#cb3-66"></a>  set1 &lt;-<span class="st"> </span><span class="kw">strsplit</span>(c, <span class="st">&quot;-&quot;</span>, <span class="dt">fixed =</span> <span class="ot">TRUE</span>)[[<span class="dv">1</span>]][<span class="dv">1</span>]</span>
@@ -566,10 +566,10 @@ text-decoration: underline;
 </div>
 <div id="run-homer" class="section level2">
 <h2>Run HOMER</h2>
-<p>To use this part of the workflow with MASA, it is essential to have HOMER installed on your system, following the official recommendations provided on the HOMER installation page:</p>
+<p>To use this part of the workflow with TIGER, it is essential to have HOMER installed on your system, following the official recommendations provided on the HOMER installation page:</p>
 <p><a href="http://homer.ucsd.edu/homer/introduction/install.htm" class="uri">http://homer.ucsd.edu/homer/introduction/install.htm</a></p>
 <p>Please make sure to carefully follow the instructions on the official HOMER website to ensure a correct installation and full access to all required features.</p>
-<p>With MASA, it is highly recommended to run HOMER to perform motif analysis on deferentially accessible ATAC-seq peaks.</p>
+<p>With TIGER, it is highly recommended to run HOMER to perform motif analysis on deferentially accessible ATAC-seq peaks.</p>
 <p>Integrating HOMER allows you to identify transcription factor motifs that are enriched in regions showing differential accessibility between conditions.</p>
 <p>In this chunk, the workflow proceeds as follows:</p>
 <ul>
@@ -579,7 +579,7 @@ text-decoration: underline;
 <li><p>Perform differential analysis with DESeq2 via HOMER, generating an annotated file of differentially accessible peaks.</p></li>
 <li><p>For these differential peaks, run motif enrichment analysis with HOMER.</p></li>
 </ul>
-<p>The results of the motif enrichment analysis are displayed as gold rings in MASA’s final plot (pdf zoom in, pdf zoom out, jpg, svg, html). In addition, motif enrichment p value threshold for each motif appears and in the MASA output table.</p>
+<p>The results of the motif enrichment analysis are displayed as gold rings in TIGER’s final plot (pdf zoom in, pdf zoom out, jpg, svg, html). In addition, motif enrichment p value threshold for each motif appears and in the TIGER output table.</p>
 <p><a href="http://homer.ucsd.edu/homer/introduction/install.html" class="uri">http://homer.ucsd.edu/homer/introduction/install.html</a></p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a></span>
 <span id="cb4-2"><a href="#cb4-2"></a></span>
@@ -593,7 +593,7 @@ text-decoration: underline;
 <span id="cb4-10"><a href="#cb4-10"></a><span class="co"># Directory containing all BAM files (replicates)</span></span>
 <span id="cb4-11"><a href="#cb4-11"></a>work_dir &lt;-<span class="st"> </span>bam_dir</span>
 <span id="cb4-12"><a href="#cb4-12"></a></span>
-<span id="cb4-13"><a href="#cb4-13"></a><span class="co"># Peak file merged from previous MASA steps</span></span>
+<span id="cb4-13"><a href="#cb4-13"></a><span class="co"># Peak file merged from previous TIGER steps</span></span>
 <span id="cb4-14"><a href="#cb4-14"></a>merged_peak &lt;-<span class="st"> </span><span class="kw">file.path</span>(bg_dir, <span class="st">&quot;pooled_fasted_fed_hotspot_modify.txt&quot;</span>)</span>
 <span id="cb4-15"><a href="#cb4-15"></a></span>
 <span id="cb4-16"><a href="#cb4-16"></a><span class="co"># Directory for HOMER output</span></span>
@@ -699,8 +699,8 @@ text-decoration: underline;
 <span id="cb4-116"><a href="#cb4-116"></a>genome_build &lt;-<span class="st"> &quot;mm10&quot;</span></span>
 <span id="cb4-117"><a href="#cb4-117"></a>homer_exe &lt;-<span class="st"> </span><span class="kw">file.path</span>(homer_bin, <span class="st">&quot;findMotifsGenome.pl&quot;</span>)</span>
 <span id="cb4-118"><a href="#cb4-118"></a></span>
-<span id="cb4-119"><a href="#cb4-119"></a>MASA_DIR &lt;-<span class="st"> &quot;/home/leslieco/masa/&quot;</span>  <span class="co"># &lt;-- User edits this line for their install</span></span>
-<span id="cb4-120"><a href="#cb4-120"></a>motif_file &lt;-<span class="st"> </span><span class="kw">file.path</span>(MASA_DIR, <span class="st">&quot;/inst/data/all_cluster_motifs.motifs&quot;</span>)</span>
+<span id="cb4-119"><a href="#cb4-119"></a>TIGER_DIR &lt;-<span class="st"> &quot;/home/leslieco/masa/&quot;</span>  <span class="co"># &lt;-- User edits this line for their install</span></span>
+<span id="cb4-120"><a href="#cb4-120"></a>motif_file &lt;-<span class="st"> </span><span class="kw">file.path</span>(TIGER_DIR, <span class="st">&quot;/inst/data/all_cluster_motifs.motifs&quot;</span>)</span>
 <span id="cb4-121"><a href="#cb4-121"></a></span>
 <span id="cb4-122"><a href="#cb4-122"></a>extra_args1 &lt;-<span class="st"> </span><span class="kw">paste0</span>(<span class="st">&quot;-mknown &quot;</span>, motif_file)</span>
 <span id="cb4-123"><a href="#cb4-123"></a></span>
@@ -714,13 +714,13 @@ text-decoration: underline;
 <span id="cb4-131"><a href="#cb4-131"></a>)</span></code></pre></div>
 </div>
 <div id="masa-processing-footprinting-and-tf-activity-inference" class="section level2">
-<h2>MASA Processing: Footprinting and TF Activity Inference</h2>
-<p>In the final step, MASA integrates all precomputed inputs to quantify transcription factor (TF) activity differences between conditions. For each condition pair, MASA performs sequence-bias–corrected footprinting over all genomic motif occurrences and summarizes the results using a bagplot.</p>
+<h2>TIGER Processing: Footprinting and TF Activity Inference</h2>
+<p>In the final step, TIGER integrates all precomputed inputs to quantify transcription factor (TF) activity differences between conditions. For each condition pair, TIGER performs sequence-bias–corrected footprinting over all genomic motif occurrences and summarizes the results using a bagplot.</p>
 <div id="input-objects" class="section level3">
 <h3>Input objects</h3>
 <p>For each condition, a <code>CutCount</code> object is created from the ATAC-seq BedGraph file (<code>*_AC_cutcount.bgr.gz</code>).</p>
 <p>These objects store Tn5-shifted cut profiles and are used as the control and treatment signals in the footprinting &amp; flanking accessibility analysis.</p>
-<p>In addition, MASA loads:</p>
+<p>In addition, TIGER loads:</p>
 <ul>
 <li><p>MotifDB : archetype motif occurrence coordinates derived from a FIMO genome-wide scan. These files (mm10_files_v1.0.tar.gz, hg19_files_v1.0.tar.gz) are available here: <a href="https://doi.org/10.5281/zenodo.18182843" class="uri">https://doi.org/10.5281/zenodo.18182843</a></p></li>
 <li><p>Merged hexamer bias table (<code>Hexamer_set1_set2_merged.csv</code>): used for sequence-bias correction.</p></li>
@@ -728,8 +728,8 @@ text-decoration: underline;
 </ul>
 </div>
 <div id="running-masa-by-motif-batches" class="section level3">
-<h3>Running MASA by motif batches</h3>
-<p>For each couple of conditions (e.g., <code>fed</code> vs <code>fasted</code>), MASA constructs a <code>GFootOption</code> object specifying:</p>
+<h3>Running TIGER by motif batches</h3>
+<p>For each couple of conditions (e.g., <code>fed</code> vs <code>fasted</code>), TIGER constructs a <code>GFootOption</code> object specifying:</p>
 <ul>
 <li><p>the merged hexamer bias file, and</p></li>
 <li><p>the hexamer index pattern (<code>nuccode{genome}6mer{chr}.dat</code>).</p></li>
@@ -754,7 +754,7 @@ The script automatically detects any existing <code>*_footprint_depth_table.csv<
 </div>
 <div id="flanking-and-central-accessibility" class="section level3">
 <h3>Flanking and central accessibility</h3>
-<p>For each motif occurrence, MASA quantifies:</p>
+<p>For each motif occurrence, TIGER quantifies:</p>
 <ul>
 <li><p>central accessibility: Tn5 cuts over the motif core, where a footprint may appear, and</p></li>
 <li><p>flanking accessibility: Tn5 cuts in the surrounding regions, providing a local background reference.</p></li>
@@ -784,14 +784,14 @@ The script automatically detects any existing <code>*_footprint_depth_table.csv<
 </div>
 <div id="visualization-and-integration-with-homer" class="section level3">
 <h3>Visualization and integration with HOMER</h3>
-<p>To summarize TF activity changes, MASA calls <code>gen_bagplot_masa()</code> function. This step:</p>
+<p>To summarize TF activity changes, TIGER calls <code>gen_bagplot_masa()</code> function. This step:</p>
 <ul>
 <li><p>generates a <strong>plot</strong>, where each point corresponds to a motif/TF,</p></li>
 <li><p>highlights motifs with significant differential footprinting (based on q-values),</p></li>
 <li><p>optionally annotates motifs using HOMER motif enrichment results based on archetype motifs (<code>knownResults.txt</code>), allowing the user to cross-reference footprint-based activity changes with motif enrichment p-values.</p></li>
 </ul>
 <p>Both <strong>PDF</strong> and <strong>HTML</strong> reports are generated, providing an interactive overview of TFs that gain or lose activity between the two conditions.</p>
-<p>Finally, <code>sessionInfo()</code> is printed to record the R environment and package versions used in the analysis, ensuring full reproducibility of the MASA run.</p>
+<p>Finally, <code>sessionInfo()</code> is printed to record the R environment and package versions used in the analysis, ensuring full reproducibility of the TIGER run.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a></span>
 <span id="cb5-2"><a href="#cb5-2"></a><span class="co"># Set working directory to bg_dir</span></span>
 <span id="cb5-3"><a href="#cb5-3"></a></span>
@@ -846,7 +846,7 @@ The script automatically detects any existing <code>*_footprint_depth_table.csv<
 <span id="cb5-52"><a href="#cb5-52"></a>  <span class="dt">name =</span> treat))</span>
 <span id="cb5-53"><a href="#cb5-53"></a>}</span>
 <span id="cb5-54"><a href="#cb5-54"></a></span>
-<span id="cb5-55"><a href="#cb5-55"></a><span class="co"># Run MASA to generate footprint_depth_table files per couple </span></span>
+<span id="cb5-55"><a href="#cb5-55"></a><span class="co"># Run TIGER to generate footprint_depth_table files per couple </span></span>
 <span id="cb5-56"><a href="#cb5-56"></a></span>
 <span id="cb5-57"><a href="#cb5-57"></a><span class="cf">for</span> (c <span class="cf">in</span> couples) {</span>
 <span id="cb5-58"><a href="#cb5-58"></a>  <span class="kw">message</span>(<span class="st">&quot;Processing couple: &quot;</span>, c)</span>
@@ -880,7 +880,7 @@ The script automatically detects any existing <code>*_footprint_depth_table.csv<
 <span id="cb5-86"><a href="#cb5-86"></a><span class="st">      </span>max<span class="op">+</span><span class="dv">25</span> <span class="co">#Identify the last processed index and increment by 25 to start the next batch</span></span>
 <span id="cb5-87"><a href="#cb5-87"></a>  }</span>
 <span id="cb5-88"><a href="#cb5-88"></a></span>
-<span id="cb5-89"><a href="#cb5-89"></a><span class="co"># Run MASA in batches of 25 motifs</span></span>
+<span id="cb5-89"><a href="#cb5-89"></a><span class="co"># Run TIGER in batches of 25 motifs</span></span>
 <span id="cb5-90"><a href="#cb5-90"></a>  <span class="cf">if</span> (start_motif<span class="op">&lt;</span>motif_no) { </span>
 <span id="cb5-91"><a href="#cb5-91"></a>  </span>
 <span id="cb5-92"><a href="#cb5-92"></a>    <span class="cf">for</span> (r <span class="cf">in</span> <span class="kw">seq</span>(start_motif, motif_no, <span class="dt">by =</span> <span class="dv">25</span>)) {</span>
@@ -927,7 +927,7 @@ The script automatically detects any existing <code>*_footprint_depth_table.csv<
 <span id="cb5-133"><a href="#cb5-133"></a>    <span class="kw">colnames</span>(dat)&lt;-<span class="kw">c</span>(<span class="st">&quot;num&quot;</span>,<span class="st">&quot;filename&quot;</span>,<span class="st">&quot;center&quot;</span>,<span class="st">&quot;logo&quot;</span>,<span class="st">&quot;motiflength&quot;</span>,<span class="st">&quot;motif&quot;</span>,<span class="st">&quot;memeNo&quot;</span>,<span class="st">&quot;memeEntry&quot;</span>,<span class="st">&quot;lrmotif&quot;</span>,<span class="st">&quot;lrflanking&quot;</span>,</span>
 <span id="cb5-134"><a href="#cb5-134"></a>                     <span class="st">&quot;lrtotal&quot;</span>,<span class="st">&quot;fdepth1&quot;</span>,<span class="st">&quot;fdepth2&quot;</span>,<span class="st">&quot;meancc1&quot;</span>,<span class="st">&quot;meancc2&quot;</span>,<span class="st">&quot;numsite&quot;</span>)</span>
 <span id="cb5-135"><a href="#cb5-135"></a>    </span>
-<span id="cb5-136"><a href="#cb5-136"></a> <span class="co"># Generate MASA plots and interactive report </span></span>
+<span id="cb5-136"><a href="#cb5-136"></a> <span class="co"># Generate TIGER plots and interactive report </span></span>
 <span id="cb5-137"><a href="#cb5-137"></a><span class="co"># The bagplot summarizes TF activity changes based on flanking + motif-core accessibility</span></span>
 <span id="cb5-138"><a href="#cb5-138"></a></span>
 <span id="cb5-139"><a href="#cb5-139"></a>   test_gen&lt;-<span class="kw">gen_bagplot_masa</span>(dat,</span>

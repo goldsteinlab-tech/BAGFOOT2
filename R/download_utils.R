@@ -1,14 +1,14 @@
 #' Download Genome Support Files (mm10/hg19)
 #'
 #' Downloads the required genome annotation and motif database files from Zenodo.
-#' These files are necessary to run MASA.
+#' These files are necessary to run TIGER.
 #'
 #' @param genome Character string. The genome build to download (e.g., "mm10" or "hg19").
-#' @param destination_dir Character string. Where to save the files. Default is "./masa_files".
+#' @param destination_dir Character string. Where to save the files. Default is "./tiger_files".
 #' @param force Logical. If TRUE, overwrites existing files.
 #' @return The path to the downloaded directory.
 #' @export
-download_masa_files <- function(genome = "mm10", destination_dir = "./masa_files", force = FALSE) {
+download_tiger_files <- function(genome = "mm10", destination_dir = "./tiger_files", force = FALSE) {
 
   # 1. Define URLs
 

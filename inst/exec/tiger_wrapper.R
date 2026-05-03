@@ -1,12 +1,12 @@
 #!/usr/bin/env Rscript
 
 # ==============================================================================
-# MASA WRAPPER - UNEQUAL REPLICATES & ROBUST HANDLING
+# TIGER WRAPPER - UNEQUAL REPLICATES & ROBUST HANDLING
 # ==============================================================================
 
 suppressPackageStartupMessages({
   library(optparse)
-  library(masa)
+  library(tiger)
   library(hash)
   library(data.table)
   library(Cairo)
@@ -32,13 +32,13 @@ option_list <- list(
   make_option(c("-c", "--control"), type="character", help="Control condition name (e.g., fed24h)"),
   make_option(c("-t", "--treatment"), type="character", help="Treatment condition name (e.g., fasted24h)"),
   make_option(c("-g", "--genome"), type="character", default="mm10", help="Genome version [default: mm10]"),
-  make_option(c("--project"), type="character", default="masa_proj", help="Project name directory containing bam_merged and macs2 folders"),
+  make_option(c("--project"), type="character", default="tiger_proj", help="Project name directory containing bam_merged and macs2 folders"),
 
   # --- FILE SUFFIXES ---
   make_option(c("--peak_suffix"), type="character", default="_peaks.narrowPeak", help="Suffix for peak files"),
   make_option(c("--bam_suffix"), type="character", default="_merged.bam", help="Suffix for BAM files"),
 
-  # --- MASA PARAMETERS ---
+  # --- TIGER PARAMETERS ---
   # Note: default is NULL to allow processing ALL motifs if not specified
   make_option(c("--max_motifs"), type="integer", default=NULL, help="Max number of motifs to process. If not set, ALL motifs are processed."),
   #make_option(c("--with_map"), type="character", default="FALSE", help="Use mappability (TRUE/FALSE) "),
@@ -58,17 +58,17 @@ option_list <- list(
   make_option(c("--peak_l2fc_cutoff"), type="double", default=0.5, help="Log2 Fold Change threshold to select significant differential peaks [default: %default]"),
   make_option(c("--peak_padj_cutoff"), type="double", default=0.05, help="Adjusted p-value (FDR) threshold to select significant differential peaks [default: %default]")
 )
-opt_parser <- OptionParser(option_list=option_list, usage = "masa [options]", add_help_option = FALSE)
+opt_parser <- OptionParser(option_list=option_list, usage = "tiger [options]", add_help_option = FALSE)
 opt <- parse_args(opt_parser, print_help_and_exit = FALSE)
 
 # ============================ 2. SETUP & CLEANING =============================
 # --- personnalized help ---
 if (opt$help) {
-  cat("MASA: a computational tool to predict transcription factor activity from ATAC-seq\n")
+  cat("TIGER: a computational tool to predict transcription factor activity from ATAC-seq\n")
   cat("\n")
   cat("Version:   1.0.1\n")
   cat("About:     developed in the Goldstein Lab.\n")
-  cat("Code:      https://github.com/goldsteinlab-tech/MASA\n")
+  cat("Code:      https://github.com/goldsteinlab-tech/TIGER\n")
   cat("\n")
   
   # --- hide secret options ---
@@ -114,9 +114,9 @@ run_homer_flag <- to_logical(opt$homer)
 use_map <- ""
 
 # System Options (SILENT MODE)
-options("masa.mc.cores" = opt$cores)
-options("masa.mc.cores.motif" = opt$cores)
-options("masa.debug" = FALSE) # Disable verbose debug
+options("tiger.mc.cores" = opt$cores)
+options("tiger.mc.cores.motif" = opt$cores)
+options("tiger.debug" = FALSE) # Disable verbose debug
 
 # Global Variables assignment
 bam_dir <- normalizePath(opt$bam_dir)
@@ -126,7 +126,7 @@ genome <- opt$genome
 set1 <- opt$control
 set2 <- opt$treatment
 
-# Explicitly define 'mm' in Global Environment for MASA internals
+# Explicitly define 'mm' in Global Environment for TIGER internals
 mm <- genome
 assign("mm", genome, envir = .GlobalEnv)
 
@@ -145,7 +145,7 @@ for (treat in all_set) {
 
   cat(paste("   Processing:", treat, "\n"))
 
-  # MASA CutCount
+  # TIGER CutCount
   assign(paste0("cc_", treat), countReadsBAM(bamfile, mm))
 
   # Use 'treat' as name, not the BAM filename
@@ -335,15 +335,15 @@ if (run_homer_flag) {
         cat("   Running Motif Finding (findMotifsGenome)...\n")
         motif_file_arg <- file.path(mm_files_dir, "all_cluster_motifs.motifs")
         if (!file.exists(motif_file_arg)) {
-            motif_file_arg <- system.file("data", "all_cluster_motifs.motifs", package="masa")
+            motif_file_arg <- system.file("data", "all_cluster_motifs.motifs", package="tiger")
         }
         run_homer(target_bed, homer_out_dir, genome, file.path(opt$homer_bin, "findMotifsGenome.pl"), paste("-mknown", motif_file_arg))
         homer_results_file <- known_results
     }
   }
 }
-# ============================ 6. MASA FOOTPRINTING (ROBUST BATCH MODE) ========
-cat("\n>>> Step 4: Running MASA Footprinting (Batch size: 25)...\n")
+# ============================ 6. TIGER FOOTPRINTING (ROBUST BATCH MODE) ========
+cat("\n>>> Step 4: Running TIGER Footprinting (Batch size: 25)...\n")
 
 # 1. Chargement des CutCounts (Une seule fois)
 cat("   Loading CutCounts...\n")
@@ -422,7 +422,7 @@ for (r in seq(1, motif_no, by = 25)) {
         cat("Error message:", e$message, "\n")
         # On n'arrête pas tout le script, on essaie de continuer au batch suivant
         # ou on stop si c'est trop grave. Ici on stop pour éviter de spammer les logs.
-        stop("Stopping execution due to MASA error.") 
+        stop("Stopping execution due to TIGER error.") 
     })
     
     gc() # Nettoyage mémoire
@@ -487,7 +487,7 @@ if (file.exists(merged_name) && file.info(merged_name)$size > 0) {
   
   tryCatch({
 	suppressWarnings(
-      gen_bagplot_masa(
+      gen_bagplot_tiger(
         dat,
         dataname1 = set1,
         dataname2 = set2,

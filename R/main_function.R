@@ -1,7 +1,7 @@
 # Fonction runGfoot
-#' Run GFoot MASA Analysis
+#' Run GFoot TIGER Analysis
 #'
-#' Runs the main GFoot MASA analysis, generating footprinting results and plots.
+#' Runs the main GFoot TIGER analysis, generating footprinting results and plots.
 #'
 #' @param Gfoot GFoot object containing analysis parameters and data.
 #' @param range Optional. Range of motifs to analyze.
@@ -1277,7 +1277,7 @@ CalcObservedExpectedCuts <- function(S, motif, tdensity,motifcenter=0, halfspan 
   #  ExpectedCuts[ii,] = observedsum[ii]* ExpectedRates[ii,];
   #}
 
-#masa version
+#tiger version
   # Gestion du expected : si pas de bias_table, bypass en mettant à 1
   if (is.null(ftable) || length(ftable) == 0 || all(is.na(ftable))) {
     ExpectedCuts <- matrix(1, nrow = nrow(ObservedCuts), ncol = ncol(ObservedCuts))

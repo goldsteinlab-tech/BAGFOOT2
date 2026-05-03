@@ -27,7 +27,7 @@ knitr::kable(
       "Nuccode* files (hexamer index in the genome, shared by all conditions)",
       "BedGraph file (shifted)",
       "Hexamer bias file",
-      "Hotspot table (MACS2 peaks reformatted to MASA format; one row per peak with placeholder footprint metrics)"
+      "Hotspot table (MACS2 peaks reformatted to TIGER format; one row per peak with placeholder footprint metrics)"
     ),
     `Output (per Couple)` = c(
       "",
@@ -44,7 +44,7 @@ knitr::kable(
 
 ## ----eval=FALSE---------------------------------------------------------------
 # 
-# library(masa)
+# library(tiger)
 # library(hash)
 # library(data.table)
 # library(Cairo)
@@ -57,9 +57,9 @@ knitr::kable(
 
 ## ----include=FALSE,eval=FALSE-------------------------------------------------
 # numcores <- 2     # No. of CPU cores to be used
-# options("masa.mc.cores"=numcores)
-# options("masa.mc.cores.motif"=numcores)
-# options("masa.debug"=T)
+# options("tiger.mc.cores"=numcores)
+# options("tiger.mc.cores.motif"=numcores)
+# options("tiger.debug"=T)
 # 
 # project<-"urf"
 # 
@@ -70,7 +70,7 @@ knitr::kable(
 # 
 # bam_dir <- paste0("/home/leslieco/",project,"/bam_merged/")
 # 
-# # mm10_files directory should be downloaded and copied in the masa directory
+# # mm10_files directory should be downloaded and copied in the tiger directory
 # mm_files_dir <- "/home/leslieco/mm10_files/"
 # 
 # mm<-"mm10"
@@ -149,7 +149,7 @@ knitr::kable(
 #                    full.names = TRUE)
 # file.remove(temp)
 # 
-# # Merge files for MASA run
+# # Merge files for TIGER run
 # for (c in couples) {
 #   print(c)
 #   set1 <- strsplit(c, "-", fixed = TRUE)[[1]][1]
@@ -200,7 +200,7 @@ knitr::kable(
 # # Directory containing all BAM files (replicates)
 # work_dir <- bam_dir
 # 
-# # Peak file merged from previous MASA steps
+# # Peak file merged from previous TIGER steps
 # merged_peak <- file.path(bg_dir, "pooled_fasted_fed_hotspot_modify.txt")
 # 
 # # Directory for HOMER output
@@ -306,8 +306,8 @@ knitr::kable(
 # genome_build <- "mm10"
 # homer_exe <- file.path(homer_bin, "findMotifsGenome.pl")
 # 
-# MASA_DIR <- "/home/leslieco/masa/"  # <-- User edits this line for their install
-# motif_file <- file.path(MASA_DIR, "/inst/data/all_cluster_motifs.motifs")
+# TIGER_DIR <- "/home/leslieco/tiger/"  # <-- User edits this line for their install
+# motif_file <- file.path(TIGER_DIR, "/inst/data/all_cluster_motifs.motifs")
 # 
 # extra_args1 <- paste0("-mknown ", motif_file)
 # 
@@ -329,7 +329,7 @@ knitr::kable(
 # 
 # # Load libraries
 # 
-# library(masa)
+# library(tiger)
 # library(dplyr,tidyr)
 # library(stringr)
 # library(ggplot2)
@@ -376,7 +376,7 @@ knitr::kable(
 #   name = treat))
 # }
 # 
-# # Run MASA to generate footprint_depth_table files per couple
+# # Run TIGER to generate footprint_depth_table files per couple
 # 
 # for (c in couples) {
 #   message("Processing couple: ", c)
@@ -410,7 +410,7 @@ knitr::kable(
 #       max+25 #Identify the last processed index and increment by 25 to start the next batch
 #   }
 # 
-# # Run MASA in batches of 25 motifs
+# # Run TIGER in batches of 25 motifs
 #   if (start_motif<motif_no) {
 # 
 #     for (r in seq(start_motif, motif_no, by = 25)) {
@@ -458,10 +458,10 @@ knitr::kable(
 #     colnames(dat)<-c("num","filename","center","logo","motiflength","motif","memeNo","memeEntry","lrmotif","lrflanking",
 #                      "lrtotal","fdepth1","fdepth2","meancc1","meancc2","numsite")
 # 
-#  # Generate MASA plots and interactive report
+#  # Generate TIGER plots and interactive report
 # # The bagplot summarizes TF activity changes based on flanking + motif-core accessibility
 # 
-#    test_gen<-gen_bagplot_masa(dat,
+#    test_gen<-gen_bagplot_tiger(dat,
 #                               dataname1=set1,
 #                               dataname2=set2,
 #                               qvaluethreshold_bagplot=0.05,

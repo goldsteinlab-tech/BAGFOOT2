@@ -47,7 +47,7 @@ readCutSitesPerChromFromBAM <- function(bamfile, chrom,shifts=c(0,0)) {
 
 
 # @useDynLib bagfoot intersect_intervals
-#' @useDynLib masa intersect_intervals
+#' @useDynLib tiger intersect_intervals
 intersect_intervals_fast_index2C <- function(X1,X2,Y1,Y2)
 {
   Isorted1= order(X1);

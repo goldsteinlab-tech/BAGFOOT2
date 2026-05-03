@@ -1,5 +1,5 @@
 
-#' @useDynLib masa CalcAggregationPerChromFixedWidthInC
+#' @useDynLib tiger CalcAggregationPerChromFixedWidthInC
 CalcAggregationPerChromFastFixedWidthInC<- function(P) {
   oldw <- getOption("warn");
   options(warn = -1);

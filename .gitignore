@@ -11,3 +11,5 @@ devtools_history.R
 # Build directories (do not upload binaries)
 src/*.o
 src/*.so
+/doc/
+/Meta/

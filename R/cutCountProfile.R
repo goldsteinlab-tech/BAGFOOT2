@@ -95,7 +95,7 @@ loadChromosomeRange<-function(refgenome) {
 #' @param threshold
 #'
 # @useDynLib bagfoot writeBGRperChromosomeInt
-#' @useDynLib masa writeBGRperChromosomeInt
+#' @useDynLib tiger writeBGRperChromosomeInt
 writeBGRperChromosomeR<-function(bgrfilename, chr, count, binsize=20, threshold=2) {
   countsize= length(count);
 
@@ -143,7 +143,7 @@ readNucleotideCodeForChromosomeForCuts<-function(nuccodefile,np) {
 #' # CalcExpectedRates(tregion, dir, nuccodes, ftable)
 CalcExpectedRates<- function(tregion, dir=NA,nuccodes=NA,ftable=NA) {
 
-  # ADD masa : no hexamer table
+  # ADD tiger : no hexamer table
   if (is.null(ftable) || length(ftable) == 0 || all(is.na(ftable))) {
     nrow_result <- nrow(tregion)
     if (nrow_result == 0) return(matrix(1, nrow=0, ncol=1))

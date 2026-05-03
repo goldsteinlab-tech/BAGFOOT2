@@ -1,5 +1,5 @@
-Package: masa
-Title: masa
+Package: tiger
+Title: tiger
 Version: 0.0.0.9000
 Authors@R: 
     person("Leslie", "Cohen", , "leslie.cohen@mail.huji.ac.il", role = c("aut", "cre"))

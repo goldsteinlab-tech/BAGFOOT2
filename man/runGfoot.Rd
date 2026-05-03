@@ -2,7 +2,7 @@
 % Please edit documentation in R/main_function.R
 \name{runGfoot}
 \alias{runGfoot}
-\title{Run GFoot MASA Analysis}
+\title{Run GFoot TIGER Analysis}
 \usage{
 runGfoot(
   Gfoot,
@@ -30,5 +30,5 @@ runGfoot(
 \item{run_set}{Character. Optional run set identifier.}
 }
 \description{
-Runs the main GFoot MASA analysis, generating footprinting results and plots.
+Runs the main GFoot TIGER analysis, generating footprinting results and plots.
 }

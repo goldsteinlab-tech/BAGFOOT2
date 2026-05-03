@@ -15,7 +15,7 @@
 #' @param use_cluster_motif_db Whether to apply motif name extraction specific to the cluster_motif database (default: FALSE).
 #' @return A ggplot object with the bagplot.
 #' @export
-gen_bagplot_masa <- function(
+gen_bagplot_tiger <- function(
   dat, dataname1 = dataname1,
   dataname2 = dataname2,
   qvaluethreshold_bagplot = 0.05,
@@ -183,7 +183,7 @@ gen_bagplot_masa <- function(
   do_draw();
 
   #bagplot from aplpack, saved in file
-  #outputfilename=sprintf("bagplot_cutcount_diff_total_footprinting_depth_%s_%s_MASA",dataname2,dataname1,qvaluethreshold_bagplot);
+  #outputfilename=sprintf("bagplot_cutcount_diff_total_footprinting_depth_%s_%s_TIGER",dataname2,dataname1,qvaluethreshold_bagplot);
   #tiff(filename= sprintf("%s.tiff",outputfilename),compression="zip", width=2000,height=1500, units="px", pointsize=20);
   #do_draw();
   #dev.off();
@@ -257,7 +257,7 @@ gen_bagplot_masa <- function(
   ########################
   #merge with cluster_motif data
   file_path_src <- file.path(getwd(), "inst", "data", "v2_ig.txt")
-  file_path_pkg <- system.file("data", "v2_ig.txt", package = "masa")
+  file_path_pkg <- system.file("data", "v2_ig.txt", package = "tiger")
 
   if (file.exists(file_path_src)) {
     file_path <- file_path_src
@@ -381,7 +381,7 @@ gen_bagplot_masa <- function(
 
   # Save results to CSV (with all qvalues)
   outputfilename = sprintf("bagplot_cutcount_diff_total_footprinting_depth_%s_%s", dataname2, dataname1)
-  write.csv(bagplottable_export, file = sprintf('%s_bagplot_output_MASA.csv', outputfilename), row.names=FALSE)
+  write.csv(bagplottable_export, file = sprintf('%s_bagplot_output_TIGER.csv', outputfilename), row.names=FALSE)
 
   window_x_min <- min(bagplottable$log2_access_ratio[bagplottable$category %in% c("bag", "fence")], na.rm=TRUE)
   window_x_max <- max(bagplottable$log2_access_ratio[bagplottable$category %in% c("bag", "fence")], na.rm=TRUE)
@@ -541,19 +541,19 @@ gen_bagplot_masa <- function(
 
   if (pdf) {
 
-    ggsave(sprintf("%s_MASA_zoomIn.pdf", outputfilename), plot = bagplot,width=36, height=24, pointsize=24, useDingbats=FALSE)
-    ggsave(sprintf("%s_MASA.pdf", outputfilename), plot = bagplot,width=18, height=14, pointsize=14, useDingbats=FALSE)
+    ggsave(sprintf("%s_TIGER_zoomIn.pdf", outputfilename), plot = bagplot,width=36, height=24, pointsize=24, useDingbats=FALSE)
+    ggsave(sprintf("%s_TIGER.pdf", outputfilename), plot = bagplot,width=18, height=14, pointsize=14, useDingbats=FALSE)
 
   }
 
-  ggsave(sprintf("%s_MASA.png", outputfilename),
+  ggsave(sprintf("%s_TIGER.png", outputfilename),
          plot = bagplot,
          width = 18, height = 14
          , units = "in",
          dpi = 600)
 
   # saving SVG
-  svg(sprintf("%s_MASA.svg", outputfilename),
+  svg(sprintf("%s_TIGER.svg", outputfilename),
       width = 16, height = 12)
   print(bagplot)
   dev.off()
@@ -642,7 +642,7 @@ gen_bagplot_masa <- function(
     library(plotly)
     library(htmlwidgets)
     interactive_plot <- ggplotly(baseplot_interactive, tooltip = "text")
-    saveWidget(interactive_plot, sprintf("%s_MASA_interactive.html", outputfilename))
+    saveWidget(interactive_plot, sprintf("%s_TIGER_interactive.html", outputfilename))
   }
 
 
