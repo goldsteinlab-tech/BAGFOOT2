@@ -1,5 +1,5 @@
 
-#' @useDynLib tiger CalcAggregationPerChromFixedWidthInC
+#' @useDynLib bagfoot2 CalcAggregationPerChromFixedWidthInC
 CalcAggregationPerChromFastFixedWidthInC<- function(P) {
   oldw <- getOption("warn");
   options(warn = -1);
@@ -64,7 +64,8 @@ CalcHeatmapFastFixedWidthC<- function(tregion, tdensity, dir=NULL) {
 
   chrs=unique(as.character(tregion$chr));
 
-  result = lapply(chrs, runCalcAggregationPerChromFastPerChrom);
+ # result = lapply(chrs, runCalcAggregationPerChromFastPerChrom); #modif LC
+  result = parallel::mclapply(chrs,runCalcAggregationPerChromFastPerChrom,mc.cores=MCCORES) ; #modif LC
   do.call("rbind", result);
 }
 

@@ -728,7 +728,7 @@ readbgr <- function(filename)
 }
 
 # @useDynLib bagfoot intersect_intervals
-#' @useDynLib tiger intersect_intervals
+#' @useDynLib bagfoot2 intersect_intervals
 intersect_intervals_fastInC <- function(X1,X2,Y1,Y2)
 {
 	Isorted1= order(X1);
@@ -738,7 +738,7 @@ intersect_intervals_fastInC <- function(X1,X2,Y1,Y2)
 
 
 # @useDynLib bagfoot intersect_intervals_index
-#' @useDynLib tiger intersect_intervals_index
+#' @useDynLib bagfoot2 intersect_intervals_index
 intersect_intervals_fast_indexInC <- function(X1,X2,Y1,Y2) {
 	Isorted1= order(X1);
 	Isorted2=  order(Y1);
@@ -1081,7 +1081,7 @@ writeBGRPerChrom <- function(fp, chr, count,  binsize = 20, thr=2)
 
 
 #@useDynLib bagfoot readcutcount
-#' @useDynLib tiger readcutcount
+#' @useDynLib bagfoot2 readcutcount
 readCutCount <- function(filename, chr) {
     maxaddr = 250000000;
     out <- .C("readcutcount", filename = as.character(datafilepath),chr= as.character(chr), span=as.integer(0), count= as.integer(vector("numeric",length=maxaddr)));

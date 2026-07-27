@@ -95,7 +95,7 @@ loadChromosomeRange<-function(refgenome) {
 #' @param threshold
 #'
 # @useDynLib bagfoot writeBGRperChromosomeInt
-#' @useDynLib tiger writeBGRperChromosomeInt
+#' @useDynLib bagfoot2 writeBGRperChromosomeInt
 writeBGRperChromosomeR<-function(bgrfilename, chr, count, binsize=20, threshold=2) {
   countsize= length(count);
 
@@ -150,67 +150,83 @@ CalcExpectedRates<- function(tregion, dir=NA,nuccodes=NA,ftable=NA) {
     ncol_result <- max(tregion$ed - tregion$st) + 1
     return(matrix(1, nrow=nrow_result, ncol=ncol_result))
   }
-  ###
-  # Get unique sorted list of chromosomes from tregion
-  locchrom = as.character(unique(sort(tregion$chr)));
-  numchrom = length(locchrom);
-  Plist = {};
-  nregion = nrow(tregion);
-  range=seq(from=1, to=nregion);
-  chrs=unique(as.character(tregion$chr));
 
-  # Function to calculate expected rates for each chromosome
-  calcPerchrom<-function(ch) {
-    nuccode = nuccodes[[ch]];  # Get nucleotide codes for the chromosome
-    region = subset(tregion, chr==ch);  # Subset regions for the chromosome
-    dirchr = subset(dir, tregion$chr==ch);  # Subset directions for the chromosome
-    numregion = nrow(region);
-    R={};
-    inRange= region$ed < length(nuccode);  # Check if region end is within nucleotide code length
-    outRange = !inRange;
-    regionInRange = region[inRange,];  # Subset regions within range
+  # Pre-extract Aj as a simple numeric vector for fast indexing
+  Aj_vec <- ftable$Aj
 
-    # Function to calculate Pj for each site
-    calcPj<-function(ii) {
-      site= regionInRange[ii,];
-      Aj_CleavageRate=ftable$Aj[nuccode[site$st:site$ed]];  # Get cleavage rates for the site
-      Pj=Aj_CleavageRate / sum(Aj_CleavageRate);  # Normalize cleavage rates
-      if (dirchr[ii]==1) {
-        returnvalue=Pj;  # Return Pj if direction is 1
-      } else {
-        returnvalue = rev(Pj);  # Reverse Pj if direction is not 1
-      }
-      returnvalue;
+  locchrom = as.character(unique(sort(tregion$chr)))
+  chr_factor <- as.character(tregion$chr)
+
+  # ---- VECTORIZED per-chromosome function (no more per-site R loop) ----
+  calcPerchrom <- function(ch) {
+    nuccode <- nuccodes[[ch]]
+    chr_mask <- chr_factor == ch
+    region <- tregion[chr_mask, ]
+    dirchr <- dir[chr_mask]
+    n_total <- nrow(region)
+
+    inRange <- region$ed < length(nuccode)
+    regionInRange <- region[inRange, ]
+    dirInRange <- dirchr[inRange]
+    n_sites <- nrow(regionInRange)
+
+    if (n_sites == 0) {
+      width <- if (n_total > 0) region$ed[1] - region$st[1] + 1 else 1
+      return(array(0, dim = c(n_total, width)))
     }
 
-    # Apply calcPj function to each region in range
-    if (MCCORES==1) {
-      QQ<-lapply(1:nrow(regionInRange) ,calcPj);
-    } else {
-      QQ<-parallel::mclapply(1:nrow(regionInRange) ,calcPj, mc.cores=MCCORES);
+    # All regions have the same width (fixed-width windows around motifs)
+    width <- regionInRange$ed[1] - regionInRange$st[1] + 1
+    st_vec <- regionInRange$st
+
+    # Build index matrix: n_sites x width
+    # Each row i contains the genomic positions st[i], st[i]+1, ..., ed[i]
+    # Using outer() for vectorized construction — no R-level loop
+    idx_matrix <- outer(st_vec, 0:(width - 1), "+")
+
+    # Vectorized lookup: genomic positions -> nuccode -> Aj cleavage rates
+    # This replaces the per-site calcPj loop entirely
+    nuccode_vals <- nuccode[idx_matrix]     # vectorized integer lookup
+    aj_matrix <- Aj_vec[nuccode_vals]       # vectorized Aj lookup
+    dim(aj_matrix) <- c(n_sites, width)     # reshape back to matrix
+
+    # Normalize each row: Pj = Aj / sum(Aj) — vectorized with rowSums
+    row_sums <- rowSums(aj_matrix, na.rm = TRUE)
+    row_sums[row_sums == 0] <- 1  # avoid division by zero
+    Qj <- aj_matrix / row_sums    # recycling divides each row
+
+    # Reverse columns for minus-strand sites — vectorized, no loop
+    rev_idx <- which(dirInRange != 1)
+    if (length(rev_idx) > 0) {
+      Qj[rev_idx, ] <- Qj[rev_idx, width:1, drop = FALSE]
     }
-    Qj= do.call("rbind",QQ)  # Combine results into a matrix
-    QC =array(0,dim=c(length(inRange), ncol(Qj)));  # Initialize QC array
-    QC[inRange,] = Qj;  # Fill QC with Qj values for regions in range
-    QC;
+
+    # Handle NaN from NA nuccode lookups
+    Qj[is.nan(Qj)] <- 0
+
+    # Place back into full array (including out-of-range sites as zeros)
+    QC <- array(0, dim = c(n_total, width))
+    QC[inRange, ] <- Qj
+    QC
   }
 
-  # Apply calcPerchrom function to each chromosome
-  Pj = parallel::mclapply(locchrom, calcPerchrom, mc.cores=MCCORES);
+  # Parallel across chromosomes (no nested parallelism — inner loop is vectorized)
+  Pj <- parallel::mclapply(locchrom, calcPerchrom, mc.cores = MCCORES)
 
-  # Function to filter out NaN results
+  # Filter NaN results — also vectorized with rowSums instead of apply
   filterNANresult <- function(SS) {
     if (is.numeric(SS)) {
-      nullrow = is.nan(apply(SS,1,sum));  # Identify rows with NaN values
-      SS[nullrow,] = array(0, dim=c(sum(nullrow), ncol(SS)));  # Replace NaN rows with zeros
-      result = SS;
+      nullrow <- is.nan(rowSums(SS))
+      if (any(nullrow)) {
+        SS[nullrow, ] <- 0
+      }
+      SS
     } else {
-      result = NA;
+      NA
     }
-    result;
   }
 
-  Pjj = lapply(Pj, filterNANresult);  # Apply filterNANresult to each element in Pj
-  ExpectedCuts=do.call(rbind, Pjj);  # Combine results into a single data frame
-  ExpectedCuts;
+  Pjj <- lapply(Pj, filterNANresult)
+  ExpectedCuts <- do.call(rbind, Pjj)
+  ExpectedCuts
 }

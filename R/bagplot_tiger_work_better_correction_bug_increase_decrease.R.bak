@@ -1,0 +1,471 @@
+### bagplot_tiger.R — statistics + Mahalanobis (D2) ranking barplots
+###
+### The bagplot statistics are computed in full and exported to CSV, but no
+### bagplot figure is drawn. The only figures produced are the two-panel D2
+### ranking barplots (PDF + JPG).
+###
+### SIGN CONVENTION
+###   delta_FA  = lrtotal = log2(cond2 / cond1)   (accessibility)
+###   delta_FPD = fdepth2 - fdepth1               (footprint depth)
+###
+###   fdepth is meanlog = log(observed / expected), so a DEEPER footprint is
+###   MORE NEGATIVE. More TF binding in cond2 therefore gives
+###   delta_FA > 0 together with delta_FPD < 0:
+###
+###       concordant  <=>  sign(delta_FA) != sign(delta_FPD)
+###       discordant  <=>  sign(delta_FA) == sign(delta_FPD)
+###
+###   The bagplot geometry is computed on the INVERTED axis (fdepth1 - fdepth2)
+###   so that bag / fence / outlier assignment is bit-identical to previous
+###   releases. The sign is flipped once, at export time only.
+
+#' Compute bagplot statistics and export Mahalanobis (D2) ranking barplots
+#'
+#' @param dat Data frame with columns motif, lrtotal, fdepth1, fdepth2.
+#' @param dataname1 Name of the first dataset.
+#' @param dataname2 Name of the second dataset.
+#' @param qvaluethreshold_bagplot FDR threshold for significance (default: 0.05).
+#' @param factor Factor for bag/fence scaling (default: 3).
+#' @param direction_rule How the `direction` column is assigned. One of:
+#'   "FA_sign"  — sign of delta_FA, the primary ranking metric (default);
+#'   "quadrant" — concordant increase / concordant decrease / discordant;
+#'   "legacy"   — original band + quadrant rules, plus a catch-all so that no
+#'                outlier is left unclassified.
+#' @param legacy_fpd_sign If TRUE, export delta_FPD as fdepth1 - fdepth2, i.e.
+#'   the inverted value written by previous releases. Default FALSE.
+#' @param include_homer_results Whether to include HOMER results (default: FALSE).
+#' @param homer_results_file Path to HOMER knownResults.txt.
+#' @param pval_threshold_homer P-value threshold for HOMER (default: 0.05).
+#' @param maha_barplot Whether to build and save the barplots (default: TRUE).
+#' @param maha_top_n Max bars per panel (default: 10). Bar thickness is constant
+#'   whatever the number of significant motifs found.
+#' @param flip_direction_labels Swap the condition names used as panel titles.
+#' @param pdf,html,noBag,noFence,noMedianPoint,pdfwidth,pdfheight,textsizefactor,printmode,use_cluster_motif_db
+#'   Deprecated, ignored. Kept so that existing wrapper calls do not error.
+#' @return Invisible list: $data, $plot_padj_up, $plot_padj_dn, $plot_D2_up, $plot_D2_dn.
+#' @export
+gen_bagplot_tiger <- function(
+  dat,
+  dataname1 = dataname1,
+  dataname2 = dataname2,
+  qvaluethreshold_bagplot = 0.05,
+  factor                  = 3,
+  direction_rule          = c("FA_sign", "quadrant", "legacy"),
+  legacy_fpd_sign         = FALSE,
+  include_homer_results   = FALSE,
+  homer_results_file      = NULL,
+  pval_threshold_homer    = 0.05,
+  maha_barplot            = TRUE,
+  maha_top_n              = 10,
+  flip_direction_labels   = FALSE,
+  # deprecated, ignored
+  pdf = TRUE, html = FALSE, noBag = FALSE, noFence = FALSE,
+  noMedianPoint = FALSE, pdfwidth = 16, pdfheight = 12,
+  textsizefactor = 1.0, printmode = FALSE, use_cluster_motif_db = TRUE) {
+
+  direction_rule <- match.arg(direction_rule)
+
+  # =========================================================================
+  # 1. Input vectors
+  # =========================================================================
+
+  trimbp <- function(sss) {
+    sapply(sss, function(s) {
+      ttt <- gregexpr('_[0-9]+bp', s)[[1]][1]
+      ifelse(ttt < 1, s, substring(s, 1, ttt - 1))
+    })
+  }
+
+  fa       <- dat$lrtotal                    # delta_FA, true sign
+  fpd_plot <- dat$fdepth1 - dat$fdepth2      # inverted axis, geometry only
+  fpd_true <- -fpd_plot                      # delta_FPD, true sign
+  name     <- trimbp(dat$motif)
+
+  datan <- data.frame(x = fa, y = fpd_plot, name = as.character(name),
+                      stringsAsFactors = FALSE)
+  mat   <- data.frame(dhp = fa, dfd = fpd_plot)
+
+  # =========================================================================
+  # 2. Bagplot geometry: bag / fence / outlier
+  # =========================================================================
+
+  ss <- aplpack::compute.bagplot(datan$x, datan$y, factor = factor,
+                                 approx.limit = nrow(datan))
+
+  findOutliersIndex <- function(data, pts) {
+    cols <- colnames(pts)
+    dat2 <- data[, cols]
+    nr   <- nrow(pts)
+    rg   <- 1:nrow(dat2)
+    matchingIdx <- unique(sort(unlist(sapply(1:nr, function(ii)
+      rg[(pts[ii, 2] == dat2[, 2]) & (pts[ii, 1] == dat2[, 1])]))))
+    if (length(matchingIdx) != nr) stop('cannot locate outliers in the data.')
+    matchingIdx
+  }
+
+  outlieridx <- integer(0)
+  if (!is.null(ss$pxy.outlier) && nrow(ss$pxy.outlier) > 0)
+    outlieridx <- findOutliersIndex(datan, ss$pxy.outlier)
+
+  outeridx <- findOutliersIndex(datan, ss$pxy.outer)
+  inneridx <- findOutliersIndex(datan, ss$pxy.bag)
+
+  category <- vector("character", length = nrow(datan))
+  category[inneridx]   <- "bag"
+  category[outeridx]   <- "fence"
+  category[outlieridx] <- "outlier"
+
+  # =========================================================================
+  # 3. Mahalanobis D2, chi2 p-value, BH q-value
+  # =========================================================================
+  # D2 is a squared distance and is invariant to the sign of an axis, so it is
+  # identical whether computed on fpd_plot or fpd_true.
+
+  Sx     <- cov(mat)
+  D2     <- mahalanobis(mat, apply(mat, 2, median), Sx)
+  pvalue <- 1 - pchisq(D2, ncol(mat))
+  qvalue <- p.adjust(pvalue, method = "BH")
+
+  udist <- sqrt((fa - mean(fa))^2 + (fpd_plot - mean(fpd_plot))^2)
+
+  bagplottable <- data.frame(
+    name              = as.character(datan$name),
+    log2_access_ratio = fa,
+    deltafd           = if (legacy_fpd_sign) fpd_plot else fpd_true,
+    category          = category,
+    hdepth            = ss$hdepths,
+    udist             = udist,
+    pvalue            = pvalue,
+    qvalue            = qvalue,
+    D2                = D2,
+    stringsAsFactors  = FALSE
+  )
+
+  bagplottable$qvalue_bagplot      <- as.numeric(qvalue)
+  bagplottable$significant_bagplot <- !is.na(qvalue) & (qvalue < qvaluethreshold_bagplot)
+
+  # =========================================================================
+  # 4. Concordance and direction
+  # =========================================================================
+  # Both are expressed in TRUE coordinates, independently of legacy_fpd_sign.
+
+  bagplottable$concordant <- sign(fa) != sign(fpd_true)
+
+  is_outlier <- category == "outlier"
+  bagplottable$direction <- "non_outlier"
+
+  if (direction_rule == "FA_sign") {
+
+    bagplottable$direction[is_outlier & fa > 0] <- "increase"
+    bagplottable$direction[is_outlier & fa < 0] <- "decrease"
+
+  } else if (direction_rule == "quadrant") {
+
+    conc <- bagplottable$concordant
+    bagplottable$direction[is_outlier & conc & fa > 0] <- "increase"
+    bagplottable$direction[is_outlier & conc & fa < 0] <- "decrease"
+    bagplottable$direction[is_outlier & !conc]         <- "discordant"
+
+  } else {   # "legacy" — rules written on the inverted axis, as originally
+
+    box   <- category %in% c("bag", "fence")
+    wxmin <- min(fa[box]);       wxmax <- max(fa[box])
+    wymin <- min(fpd_plot[box]); wymax <- max(fpd_plot[box])
+
+    increase_mask <- (fa > wxmin & fa < wxmax & fpd_plot > wymax) |
+      (fa > wxmax & fpd_plot > wymin & fpd_plot < wymax) |
+      (fa > 0 & fpd_plot > 0)
+
+    decrease_mask <- (fa > wxmin & fa < wxmax & fpd_plot < wymin) |
+      (fa < wxmin & fpd_plot > wymin & fpd_plot < wymax) |
+      (fa < 0 & fpd_plot < 0)
+
+    outside_x <- (fa       < wxmin) | (fa       > wxmax)
+    outside_y <- (fpd_plot < wymin) | (fpd_plot > wymax)
+    # discordant on the inverted axis = OPPOSITE signs (the original code used
+    # == here, which contradicted its own increase/decrease quadrant rules)
+    discordant_mask <- (sign(fa) != sign(fpd_plot)) & outside_x & outside_y
+
+    bagplottable$direction[is_outlier & increase_mask]   <- "increase"
+    bagplottable$direction[is_outlier & decrease_mask]   <- "decrease"
+    bagplottable$direction[is_outlier & discordant_mask] <- "discordant"
+
+    # The masks above do not partition the plane: the window is a bounding box
+    # while the fence is a convex hull, so an outlier could be left unlabelled.
+    unassigned <- is_outlier & bagplottable$direction == "non_outlier"
+    if (any(unassigned)) {
+      bagplottable$direction[unassigned & fa > 0] <- "increase"
+      bagplottable$direction[unassigned & fa < 0] <- "decrease"
+      message(sprintf("%d outlier(s) unclassified by the legacy rules, assigned by sign(delta_FA).",
+                      sum(unassigned)))
+    }
+  }
+
+  # =========================================================================
+  # 5. HOMER integration
+  # =========================================================================
+
+  bagplottable$significant_homer <- FALSE
+
+  if (include_homer_results) {
+    if (is.null(homer_results_file)) {
+      warning("homer_results_file is NULL: continuing without HOMER integration.")
+    } else {
+      homer <- read.table(homer_results_file, header = FALSE, sep = "\t", fill = TRUE)
+      colnames(homer) <- c("Motif.Name", "Consensus", "P.value", "Log.P.value",
+                           "q.value", "nb_target_seq_with_motif",
+                           "perc_target_seq_with_motif",
+                           "nb_background_seq_with_motif",
+                           "perc_background_seq_with_motif")
+      homer            <- homer[-1, ]
+      homer$P.value    <- as.numeric(homer$P.value)
+      homer$Motif.Name <- toupper(sapply(homer$Motif.Name,
+                                         function(z) strsplit(z, ":")[[1]][1]))
+      bagplottable$name <- toupper(bagplottable$name)
+      sig_homer <- homer$Motif.Name[homer$P.value <= pval_threshold_homer]
+      bagplottable$significant_homer <- bagplottable$name %in% sig_homer
+    }
+  }
+
+  # =========================================================================
+  # 6. Merge with the motif cluster table
+  # =========================================================================
+
+  file_path_src <- file.path(getwd(), "inst", "data", "v2_ig.txt")
+  file_path_pkg <- system.file("data", "v2_ig.txt", package = "tiger")
+
+  file_path <- if (file.exists(file_path_src)) {
+    file_path_src
+  } else if (file_path_pkg != "" && file.exists(file_path_pkg)) {
+    file_path_pkg
+  } else {
+    stop("ERROR: v2_ig.txt not found in source tree (inst/data) or installed package. Searched:\n",
+         file_path_src, "\n", file_path_pkg)
+  }
+
+  v2_raw       <- read.table(file_path, header = FALSE, sep = "\t",
+                             fill = TRUE, stringsAsFactors = FALSE)
+  header_names <- as.character(v2_raw[1, ])
+  v2           <- v2_raw[-1, ]
+  n_col        <- min(length(header_names), ncol(v2))
+  v2           <- v2[, 1:n_col]
+  colnames(v2) <- header_names[1:n_col]
+  v2[]         <- lapply(v2, as.character)
+
+  bagplottable$name <- as.character(bagplottable$name)
+  bagplottable <- merge(bagplottable, v2, by.x = "name", by.y = "cluster", all.x = TRUE)
+
+  is_bad <- sapply(bagplottable, function(z) is.list(z) || is.data.frame(z))
+  if (any(is_bad)) {
+    warning("Non atomic columns dropped: ", paste(names(bagplottable)[is_bad], collapse = ", "))
+    bagplottable <- bagplottable[, !is_bad, drop = FALSE]
+  }
+
+  # =========================================================================
+  # 7. CSV export
+  # =========================================================================
+
+  bagplottable_export <- bagplottable %>%
+    dplyr::rename(
+      motif_name              = "name_IG",
+      delta_FA                = "log2_access_ratio",
+      delta_FPD               = "deltafd",
+      halfspace_depth         = "hdepth",
+      euclidean_distance      = "udist",
+      mahalanobis_distance_D2 = "D2",
+      archetype_name          = "name",
+      D2_qvalue               = "qvalue_bagplot",
+      D2_pvalue               = "pvalue",
+      D2_significant          = "significant_bagplot"
+    )
+
+  if (include_homer_results) {
+    bagplottable_export <- bagplottable_export %>%
+      dplyr::rename(Homer_significant = "significant_homer")
+  } else {
+    bagplottable_export$significant_homer <- NULL
+    bagplottable_export$Homer_significant <- NULL
+  }
+
+  # Same column set and order as before; `concordant` appended at the end
+  cols_to_select <- c(
+    "motif_name", "delta_FA", "delta_FPD", "category",
+    "mahalanobis_distance_D2", "halfspace_depth", "euclidean_distance",
+    "D2_pvalue", "D2_qvalue", "direction", "D2_significant",
+    "archetype_name", "motif_id", "source_id", "tf_name",
+    "family_name", "motif_type", "PMID"
+  )
+  if (include_homer_results)
+    cols_to_select <- append(cols_to_select, "Homer_significant", after = 11)
+  cols_to_select <- c(cols_to_select, "concordant")
+
+  missing <- setdiff(cols_to_select, names(bagplottable_export))
+  if (length(missing))
+    stop("Columns missing in bagplottable_export: ", paste(missing, collapse = ", "))
+
+  bagplottable_export <- bagplottable_export %>% dplyr::select(dplyr::all_of(cols_to_select))
+
+  outputfilename <- sprintf("bagplot_cutcount_diff_total_footprinting_depth_%s_%s",
+                            dataname2, dataname1)
+  write.csv(bagplottable_export,
+            file      = sprintf('%s_bagplot_output_TIGER.csv', outputfilename),
+            row.names = FALSE)
+
+  message(sprintf("delta_FPD exported as %s",
+                  if (legacy_fpd_sign) "fdepth1 - fdepth2 (LEGACY, inverted)"
+                  else "fdepth2 - fdepth1 (true sign)"))
+
+  # =========================================================================
+  # 8. Mahalanobis (D2) ranking barplots
+  # =========================================================================
+  # Selection depends ONLY on D2 significance and sign(delta_FA). It never
+  # reads the `direction` column, so no significant motif can be lost to a
+  # classification gap.
+
+  p_padj_up <- p_padj_dn <- p_D2_up <- p_D2_dn <- NULL
+
+  if (maha_barplot) {
+
+    if (!requireNamespace("patchwork", quietly = TRUE))
+      stop("Please install 'patchwork': install.packages('patchwork')")
+
+    fill_col      <- c("#99000D", "#EF3B2C", "#FC9272", "#FDBBA1", "grey")
+    col_homer     <- "#B8960A"   # yellow ochre — HOMER motif enrichment (ME)
+    sq_size       <- 4
+    sq_gap        <- 0.06
+    bar_height_in <- 0.35
+    margin_in     <- 1.8
+
+    tab <- bagplottable
+    tab$display_name <- ifelse(!is.na(tab$name_IG) & tab$name_IG != "",
+                               tab$name_IG, tab$name)
+    tab$D2     <- as.numeric(tab$D2)
+    tab$qvalue <- as.numeric(tab$qvalue)
+
+    # Deduplicate at display-name level, keeping the largest D2
+    tab <- tab[order(-tab$D2), ]
+    tab <- tab[!duplicated(tab$display_name), ]
+
+    sig <- tab[tab$significant_bagplot & !is.na(tab$log2_access_ratio), , drop = FALSE]
+    up  <- sig[sig$log2_access_ratio > 0, , drop = FALSE]
+    dn  <- sig[sig$log2_access_ratio < 0, , drop = FALSE]
+
+    message(sprintf("significant motifs (padj < %.3g): %d increased, %d decreased",
+                    qvaluethreshold_bagplot, nrow(up), nrow(dn)))
+
+    take_top <- function(d) {
+      d <- d[order(-d$D2), ]
+      d <- d[seq_len(min(nrow(d), maha_top_n)), , drop = FALSE]
+      d[order(d$D2), ]          # ascending: coord_flip puts the last on top
+    }
+    up <- take_top(up)
+    dn <- take_top(dn)
+
+    # metric = "padj" : y = -log10(padj), fill = D2
+    # metric = "D2"   : y = D2,           fill = padj
+    build_panel <- function(df, title_str, metric) {
+      if (nrow(df) == 0) return(NULL)
+
+      # Pad the discrete axis up to maha_top_n slots so that bar thickness is
+      # identical whatever the number of significant motifs: 2 bars occupy
+      # 2 slots out of maha_top_n, not 2 slots out of 2.
+      real_lv <- as.character(df$display_name)
+      n_pad   <- max(maha_top_n - length(real_lv), 0)
+      pad_lv  <- if (n_pad > 0) strrep(" ", seq_len(n_pad)) else character(0)
+      all_lv  <- c(pad_lv, real_lv)          # first level = bottom of panel
+
+      df$display_name <- factor(df$display_name, levels = all_lv)
+
+      if (metric == "padj") {
+        df$yval    <- -log10(pmax(df$qvalue, .Machine$double.xmin))
+        df$fillval <- df$D2
+        y_lab      <- expression(-log[10] * "(" * italic(p)[adj] * ")")
+        fill_scale <- ggplot2::scale_fill_gradientn(colours = rev(fill_col),
+                                                    name    = expression(D^2))
+      } else {
+        df$yval    <- df$D2
+        df$fillval <- df$qvalue
+        y_lab      <- expression(D^2)
+        fill_scale <- ggplot2::scale_fill_gradientn(colours = fill_col,
+                                                    name    = expression(italic(p)[adj]))
+      }
+
+      y_max    <- max(df$yval, na.rm = TRUE)
+      y_sq_hom <- y_max * (1 + sq_gap)
+      y_lim    <- y_max * (1 + sq_gap * 3)
+
+      rows_hom <- df[!is.na(df$significant_homer) & df$significant_homer, , drop = FALSE]
+
+      p <- ggplot2::ggplot(df, ggplot2::aes(x = display_name, y = yval, fill = fillval)) +
+        ggplot2::geom_col(width = 0.8) +
+        ggplot2::coord_flip(clip = "off", ylim = c(0, y_lim)) +
+        fill_scale +
+        ggplot2::scale_x_discrete(limits = all_lv,
+                                  expand = ggplot2::expansion(add = c(0.5, 0.5)))
+
+      if (include_homer_results && nrow(rows_hom) > 0) {
+        p <- p + ggplot2::geom_point(
+          data        = rows_hom,
+          mapping     = ggplot2::aes(x = display_name, y = y_sq_hom),
+          shape       = 15, size = sq_size, color = col_homer,
+          inherit.aes = FALSE
+        )
+      }
+
+      p +
+        ggplot2::theme_classic() +
+        ggplot2::labs(title = title_str, x = NULL, y = y_lab) +
+        ggplot2::theme(
+          plot.margin = ggplot2::margin(5.5, 60, 5.5, 5.5),
+          axis.text.y = ggplot2::element_text(size = 11),
+          axis.text.x = ggplot2::element_text(size = 11),
+          axis.title  = ggplot2::element_text(size = 12),
+          plot.title  = ggplot2::element_text(size = 16, face = "bold")
+        )
+    }
+
+    plot_height <- maha_top_n * bar_height_in + margin_in
+    prefix      <- sprintf("maha_barplot_%s_%s", dataname2, dataname1)
+
+    save_pair <- function(p_up, p_dn, suffix) {
+      if (is.null(p_up) && is.null(p_dn)) return(invisible(NULL))
+      left  <- if (!is.null(p_up)) p_up else patchwork::plot_spacer()
+      right <- if (!is.null(p_dn)) p_dn else patchwork::plot_spacer()
+      combined <- left + right + patchwork::plot_layout(ncol = 2, widths = c(1, 1))
+
+      ggplot2::ggsave(sprintf("%s_%s_TIGER.pdf", prefix, suffix),
+                      plot = combined, width = 18, height = plot_height)
+      ggplot2::ggsave(sprintf("%s_%s_TIGER.jpg", prefix, suffix),
+                      plot = combined, width = 18, height = plot_height,
+                      units = "in", dpi = 300, quality = 100)
+      invisible(NULL)
+    }
+
+    # Which condition gains signal when delta_FA > 0 depends on how `dat` was
+    # built upstream relative to the argument order used here, so it is set
+    # explicitly rather than inferred.
+    name_increase <- if (flip_direction_labels) dataname2 else dataname1
+    name_decrease <- if (flip_direction_labels) dataname1 else dataname2
+
+    message(sprintf("increase panel -> '%s'  |  decrease panel -> '%s'   (flip_direction_labels = TRUE to swap)",
+                    name_increase, name_decrease))
+
+    p_padj_up <- build_panel(up, name_increase, "padj")
+    p_padj_dn <- build_panel(dn, name_decrease, "padj")
+    save_pair(p_padj_up, p_padj_dn, "padj")
+
+    p_D2_up <- build_panel(up, name_increase, "D2")
+    p_D2_dn <- build_panel(dn, name_decrease, "D2")
+    save_pair(p_D2_up, p_D2_dn, "D2")
+
+    message("Barplots saved with prefix: ", prefix)
+  }
+
+  invisible(list(
+    data         = bagplottable_export,
+    plot_padj_up = p_padj_up,
+    plot_padj_dn = p_padj_dn,
+    plot_D2_up   = p_D2_up,
+    plot_D2_dn   = p_D2_dn
+  ))
+}

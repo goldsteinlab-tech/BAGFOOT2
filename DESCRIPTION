@@ -1,4 +1,4 @@
-Package: tiger
+Package: bagfoot2
 Title: tiger
 Version: 0.0.0.9000
 Authors@R: 
@@ -24,7 +24,8 @@ Imports:
     dplyr,
     ggExtra,
     DESeq2,
-    bedtoolsr
+    bedtoolsr,
+    patchwork
 Suggests: 
     knitr,
     rmarkdown

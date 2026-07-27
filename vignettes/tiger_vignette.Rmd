@@ -226,7 +226,7 @@ Your script should be in the directory bg_dir.
 
 ```{r, eval=FALSE}
 
-library(tiger)
+library(bagfoot2)
 library(hash)
 library(data.table)
 library(Cairo)
@@ -658,7 +658,7 @@ This table contains, for each motif:
 
 ### Visualization and integration with HOMER
 
-To summarize TF activity changes, TIGER calls `gen_bagplot_tiger()` function.
+To summarize TF activity changes, TIGER calls `gen_bagplot_bagfoot2()` function.
 This step:
 
 - generates a **plot**, where each point corresponds to a motif/TF, 
@@ -680,7 +680,7 @@ knitr::opts_knit$set(root.dir = "/home/leslieco/bg_files_fed_fasted/")
 
 # Load libraries 
 
-library(tiger)
+library(bagfoot2)
 library(dplyr,tidyr)
 library(stringr)
 library(ggplot2)
@@ -812,7 +812,7 @@ for (c in couples) {
  # Generate TIGER plots and interactive report 
 # The bagplot summarizes TF activity changes based on flanking + motif-core accessibility
 
-   test_gen<-gen_bagplot_tiger(dat,
+   test_gen<-gen_bagplot_bagfoot2(dat,
                               dataname1=set1,
                               dataname2=set2,
                               qvaluethreshold_bagplot=0.05,

@@ -44,7 +44,7 @@ knitr::kable(
 
 ## ----eval=FALSE---------------------------------------------------------------
 # 
-# library(tiger)
+# library(bagfoot2)
 # library(hash)
 # library(data.table)
 # library(Cairo)
@@ -329,7 +329,7 @@ knitr::kable(
 # 
 # # Load libraries
 # 
-# library(tiger)
+# library(bagfoot2)
 # library(dplyr,tidyr)
 # library(stringr)
 # library(ggplot2)
@@ -461,7 +461,7 @@ knitr::kable(
 #  # Generate TIGER plots and interactive report
 # # The bagplot summarizes TF activity changes based on flanking + motif-core accessibility
 # 
-#    test_gen<-gen_bagplot_tiger(dat,
+#    test_gen<-gen_bagplot_bagfoot2(dat,
 #                               dataname1=set1,
 #                               dataname2=set2,
 #                               qvaluethreshold_bagplot=0.05,

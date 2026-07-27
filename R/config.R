@@ -13,9 +13,11 @@
 
 # Configuration
 
-MCCORES=2;	         # Number of CPU cores for parallel computation
+#MCCORES=2;	         # Number of CPU cores for parallel computation
+MCCORES=max(2, parallel::detectCores() - 1) #modif LC
 
-MCCORES_MOTIF = 1;     # Number of motifs calculated at the same time
+#MCCORES_MOTIF = 1;     # Number of motifs calculated at the same time
+MCCORES_MOTIF = 4 #modif LC
 
 FAST_AGGREGATION_MC_CORES = 4; # Number of CPU cores for less memory-dependent computation
 
