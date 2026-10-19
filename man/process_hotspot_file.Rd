@@ -22,7 +22,7 @@ process_hotspot_file(
 
 \item{sep_in}{Character. Input file separator (default: ",").}
 
-\item{sep_out}{Character. Output file separator (default: "\t").}
+\item{sep_out}{Character. Output file separator (default: "\\t").}
 
 \item{skip_lines}{Integer. Number of lines to skip at the start of the input file (default: 1).}
 }

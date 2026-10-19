@@ -60,8 +60,6 @@ MotifDB <- setClass("MotifDB",
 #' @return A GFootOption object.
 #' @export
 #'
-#' @examples
-#' # opt <- GFootOption(biasfile = "bias.txt", hexamer_pattern = "hexamer_{chr}.dat")
 GFootOption <- setClass("GFootOption",
                         representation(
                           biasfile = "character",

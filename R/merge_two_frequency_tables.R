@@ -10,7 +10,6 @@
 #' The merged table is also written to the specified output file.
 #' @export
 #'
-#' @examples
 merge_two_frequency_tables<- function(file1, file2, outfile) {
   t1<-read.table(file1);
   t2<-read.table(file2);

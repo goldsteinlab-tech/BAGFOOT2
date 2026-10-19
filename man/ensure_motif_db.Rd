@@ -4,13 +4,13 @@
 \alias{ensure_motif_db}
 \title{Ensure motifDB files exist locally, downloading them only if needed}
 \usage{
-ensure_motif_db(genome, cache_dir = tiger_cache_dir(), force = FALSE)
+ensure_motif_db(genome, cache_dir = bagfoot2_cache_dir(), force = FALSE)
 }
 \arguments{
 \item{genome}{Character string. The genome build needed ("mm10" or "hg38").}
 
 \item{cache_dir}{Character string. Root directory to look in / download to.
-Defaults to \code{tiger_cache_dir()}.}
+Defaults to \code{bagfoot2_cache_dir()}.}
 
 \item{force}{Logical. If TRUE, forces a re-download even if files exist.}
 }
@@ -21,9 +21,9 @@ Character string. Path to the motifDB directory for this genome
 }
 \description{
 Looks for an already-resolved motifDB directory for the given genome
-(via \code{tiger_cache_dir()}, which checks shared/cluster locations
+(via \code{bagfoot2_cache_dir()}, which checks shared/cluster locations
 first) before falling back to downloading from Zenodo. Validity is
-checked against the actual files TIGER expects: a
+checked against the actual files BAGFOOT2 expects: a
 "motiflist_\if{html}{\out{<genome>}}_cluster.txt" file and a "\if{html}{\out{<genome>}}_cluster_fimo"
 subdirectory. This is the function called by both the command-line
 wrapper and direct R usage.

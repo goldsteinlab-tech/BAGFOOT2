@@ -6,7 +6,7 @@
 \usage{
 download_bagfoot2_files(
   genome = "mm10",
-  destination_dir = tiger_cache_dir(),
+  destination_dir = bagfoot2_cache_dir(),
   force = FALSE,
   verify_checksum = TRUE
 )
@@ -15,7 +15,7 @@ download_bagfoot2_files(
 \item{genome}{Character string. The genome build to download ("mm10" or "hg38").}
 
 \item{destination_dir}{Character string. Where to save/extract the files.
-Defaults to \code{tiger_cache_dir()}.}
+Defaults to \code{bagfoot2_cache_dir()}.}
 
 \item{force}{Logical. If TRUE, re-downloads even if files already exist locally.}
 
@@ -28,5 +28,5 @@ Character string. Path to the directory containing the extracted files.
 \description{
 Downloads the required genome-wide motif database (motifDB) files from
 Zenodo. These files are genome-wide FIMO motif scan results and are
-necessary to run TIGER for a given genome build.
+necessary to run BAGFOOT2 for a given genome build.
 }

@@ -9,7 +9,7 @@ gen_bagplot_bagfoot2(
   dataname1 = dataname1,
   dataname2 = dataname2,
   qvaluethreshold_bagplot = 0.05,
-  factor = 3,
+  factor = 1.5,
   pdf = TRUE,
   html = FALSE,
   noBag = FALSE,
@@ -25,20 +25,20 @@ gen_bagplot_bagfoot2(
   use_cluster_motif_db = TRUE,
   mcd_alpha = 0.75,
   maha_barplot = TRUE,
-  maha_top_n = 10,
+  maha_top_n = 20,
   maha_mode = "both"
 )
 }
 \arguments{
 \item{dat}{Data frame containing bagplot input data.}
 
-\item{dataname1}{Name of the first dataset (e.g., control).}
+\item{dataname1}{Treatment condition name (title of the 'increase' panel).}
 
-\item{dataname2}{Name of the second dataset (e.g., treatment).}
+\item{dataname2}{Control condition name (title of the 'decrease' panel).}
 
 \item{qvaluethreshold_bagplot}{Threshold for q-value significance (default: 0.05).}
 
-\item{factor}{Factor for bagplot scaling (default: 3).}
+\item{factor}{Factor for bagplot scaling (default: 1.5).}
 
 \item{pdf}{Whether to save the plot as a PDF (default: TRUE).}
 
@@ -57,7 +57,7 @@ true positives. See robust_mahalanobis_test() in method.R.}
 
 \item{maha_barplot}{Whether to generate the Mahalanobis barplot figures (default: TRUE).}
 
-\item{maha_top_n}{Max bars per panel in the Mahalanobis barplots (default: 10).}
+\item{maha_top_n}{Max bars per panel in the Mahalanobis barplots (default: 20).}
 
 \item{maha_mode}{Which barplot layout(s) to produce:
 \code{"padj"} = bar length is -log10(FDR), fill is D2;

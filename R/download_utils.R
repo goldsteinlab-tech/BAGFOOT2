@@ -1,24 +1,24 @@
-#' Get the default cache directory for TIGER's motif database files
+#' Get the default cache directory for BAGFOOT2's motif database files
 #'
 #' Resolves where genome support files (motifDB) should be stored/looked up.
-#' Priority order: the TIGER_MOTIF_DB_DIR environment variable (useful on a
+#' Priority order: the BAGFOOT2_MOTIF_DB_DIR environment variable (useful on a
 #' shared cluster where files already exist at a fixed path), then the
-#' "tiger.motif_db_dir" R option, then a default per-user cache directory.
+#' "bagfoot2.motif_db_dir" R option, then a default per-user cache directory.
 #'
 #' @return Character string. Path to the resolved cache directory.
 #' @export
-tiger_cache_dir <- function() {
+bagfoot2_cache_dir <- function() {
 
   # 1. Environment variable override (e.g. set in .bashrc on a cluster)
-  env_dir <- Sys.getenv("TIGER_MOTIF_DB_DIR", unset = "")
+  env_dir <- Sys.getenv("BAGFOOT2_MOTIF_DB_DIR", unset = "")
   if (nzchar(env_dir)) return(env_dir)
 
   # 2. R option override (set via options() in a script/session)
-  opt_dir <- getOption("tiger.motif_db_dir", default = NULL)
+  opt_dir <- getOption("bagfoot2.motif_db_dir", default = NULL)
   if (!is.null(opt_dir)) return(opt_dir)
 
   # 3. Default: per-user cache directory (created if missing)
-  dir <- tools::R_user_dir("tiger", which = "data")
+  dir <- tools::R_user_dir("bagfoot2", which = "data")
   if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
   dir
 }
@@ -27,18 +27,18 @@ tiger_cache_dir <- function() {
 #'
 #' Downloads the required genome-wide motif database (motifDB) files from
 #' Zenodo. These files are genome-wide FIMO motif scan results and are
-#' necessary to run TIGER for a given genome build.
+#' necessary to run BAGFOOT2 for a given genome build.
 #'
 #' @param genome Character string. The genome build to download ("mm10" or "hg38").
 #' @param destination_dir Character string. Where to save/extract the files.
-#'   Defaults to \code{tiger_cache_dir()}.
+#'   Defaults to \code{bagfoot2_cache_dir()}.
 #' @param force Logical. If TRUE, re-downloads even if files already exist locally.
 #' @param verify_checksum Logical. If TRUE (default), verifies the downloaded
 #'   archive's MD5 checksum against the known value before extracting.
 #' @return Character string. Path to the directory containing the extracted files.
 #' @export
 download_bagfoot2_files <- function(genome = "mm10",
-                                 destination_dir = tiger_cache_dir(),
+                                 destination_dir = bagfoot2_cache_dir(),
                                  force = FALSE,
                                  verify_checksum = TRUE) {
 
@@ -106,22 +106,22 @@ download_bagfoot2_files <- function(genome = "mm10",
 #' Ensure motifDB files exist locally, downloading them only if needed
 #'
 #' Looks for an already-resolved motifDB directory for the given genome
-#' (via \code{tiger_cache_dir()}, which checks shared/cluster locations
+#' (via \code{bagfoot2_cache_dir()}, which checks shared/cluster locations
 #' first) before falling back to downloading from Zenodo. Validity is
-#' checked against the actual files TIGER expects: a
+#' checked against the actual files BAGFOOT2 expects: a
 #' "motiflist_<genome>_cluster.txt" file and a "<genome>_cluster_fimo"
 #' subdirectory. This is the function called by both the command-line
 #' wrapper and direct R usage.
 #'
 #' @param genome Character string. The genome build needed ("mm10" or "hg38").
 #' @param cache_dir Character string. Root directory to look in / download to.
-#'   Defaults to \code{tiger_cache_dir()}.
+#'   Defaults to \code{bagfoot2_cache_dir()}.
 #' @param force Logical. If TRUE, forces a re-download even if files exist.
 #' @return Character string. Path to the motifDB directory for this genome
 #'   (i.e. the directory containing "motiflist_<genome>_cluster.txt" and
 #'   "<genome>_cluster_fimo/").
 #' @export
-ensure_motif_db <- function(genome, cache_dir = tiger_cache_dir(), force = FALSE) {
+ensure_motif_db <- function(genome, cache_dir = bagfoot2_cache_dir(), force = FALSE) {
 
   target_dir <- file.path(cache_dir, paste0(genome, "_files"))
 
@@ -147,18 +147,18 @@ ensure_motif_db <- function(genome, cache_dir = tiger_cache_dir(), force = FALSE
 
 #' Build a MotifDB object for a given genome, downloading files if needed
 #'
-#' Convenience wrapper for users running TIGER directly in R (as opposed to
+#' Convenience wrapper for users running BAGFOOT2 directly in R (as opposed to
 #' the command-line wrapper): resolves/downloads the motifDB files for the
 #' requested genome and returns a ready-to-use \code{MotifDB} object, with
-#' paths built the same way \code{tiger_wrapper.R} builds them.
+#' paths built the same way \code{bagfoot2_wrapper.R} builds them.
 #'
 #' @param genome Character string. The genome build needed ("mm10" or "hg38").
 #' @param cache_dir Character string. Root directory to look in / download to.
-#'   Defaults to \code{tiger_cache_dir()}.
+#'   Defaults to \code{bagfoot2_cache_dir()}.
 #' @param force Logical. If TRUE, forces a re-download even if files exist.
 #' @return A \code{MotifDB} object pointing to the resolved directory.
 #' @export
-motifDB_for_genome <- function(genome, cache_dir = tiger_cache_dir(), force = FALSE) {
+motifDB_for_genome <- function(genome, cache_dir = bagfoot2_cache_dir(), force = FALSE) {
   mm_files_dir <- ensure_motif_db(genome, cache_dir = cache_dir, force = force)
   MotifDB(
     motiflistfile = file.path(mm_files_dir, paste0("motiflist_", genome, "_cluster.txt")),

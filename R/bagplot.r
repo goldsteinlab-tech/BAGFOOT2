@@ -1,4 +1,4 @@
-#' @export
+
 gen_bagplot<-function(dat, dataname1=dataname1, dataname2=dataname2, factor=3, pdf=T,  noBag=F, noFence=F, noMedianPoint=F) {
   #	factor = 3;
   x=dat$lrtotal;
@@ -96,7 +96,7 @@ gen_bagplot<-function(dat, dataname1=dataname1, dataname2=dataname2, factor=3, p
 
 }
 
-#' @export
+
 gen_bagplot_chisq<-function(dat, dataname1=dataname1, dataname2=dataname2, qvaluethreshold=0.05,factor=3, pdf=T,  noBag=F, noFence=F, noMedianPoint=F,pdfwidth=16, pdfheight=12, textsizefactor=1.0, printmode=F) {
 #	factor = 3;
 	x=dat$lrtotal;

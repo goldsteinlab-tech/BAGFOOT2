@@ -1,4 +1,9 @@
+^dev$
+^doc$
+^docs$
+^\.git$
+^\.gitignore$
+^Meta$
+^README\.md$
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^doc$
-^Meta$

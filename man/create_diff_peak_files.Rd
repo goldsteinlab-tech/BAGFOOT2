@@ -21,7 +21,7 @@ create_diff_peak_files(
 
 \item{input_filename}{Character. Name of the input file.}
 
-\item{sep}{Character. Separator used in the input file (default: "\t").}
+\item{sep}{Character. Separator used in the input file (default: "\\t").}
 
 \item{chr}{Character. Column name for chromosome (default: "Chr").}
 

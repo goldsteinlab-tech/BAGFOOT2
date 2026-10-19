@@ -2,7 +2,7 @@
 % Please edit documentation in R/compute_site_scores.R
 \name{compute_site_scores}
 \alias{compute_site_scores}
-\title{Compute site-level scores following TIGER logic}
+\title{Compute site-level scores following BAGFOOT2 logic}
 \usage{
 compute_site_scores(
   sites,
@@ -30,13 +30,13 @@ compute_site_scores(
 
 \item{motifcenter}{integer, motif center position (0 = infer from motif width)}
 
-\item{halfspan}{integer, half-window around motif center; TIGER-like default = 200}
+\item{halfspan}{integer, half-window around motif center; BAGFOOT2-like default = 200}
 
 \item{nuccodes}{nucleotide code list}
 
 \item{ftable}{bias table}
 
-\item{motifbuffer}{integer, motif offset around motif region; TIGER-like default = 2}
+\item{motifbuffer}{integer, motif offset around motif region; BAGFOOT2-like default = 2}
 
 \item{pseudocount}{numeric, small value to avoid division by zero}
 
@@ -48,7 +48,7 @@ compute_site_scores(
 data.frame with one row per site
 }
 \description{
-TIGER-like definitions:
+BAGFOOT2-like definitions:
 \itemize{
 \item window: +/- 200 bp around motif
 \item motif region: motifcenter +/- motif width, extended by motifbuffer

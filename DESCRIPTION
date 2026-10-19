@@ -1,31 +1,42 @@
 Package: bagfoot2
-Title: tiger
-Version: 0.0.0.9000
+Title: Differential Transcription Factor Footprinting from ATAC-seq
+Version: 2.0.0
 Authors@R: 
     person("Leslie", "Cohen", , "leslie.cohen@mail.huji.ac.il", role = c("aut", "cre"))
-Description: motif associated sign of activity
+Description: Predicts which transcription factors change their activity
+    between two conditions from ATAC-seq data, by combining Tn5 bias-corrected
+    footprint depth and flanking accessibility over archetype motif clusters,
+    with a robust Mahalanobis (MCD) outlier test. Updated implementation of
+    BaGFoot (Baek et al., Cell Reports 2017).
 License: GPL-3
+URL: https://github.com/goldsteinlab-tech/BAGFOOT2
+BugReports: https://github.com/goldsteinlab-tech/BAGFOOT2/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports: 
     aplpack,
-    BSgenome.Hsapiens.UCSC.hg19,
-    BSgenome.Mmusculus.UCSC.mm9,
+    bedtoolsr,
+    BSgenome.Hsapiens.UCSC.hg38,
+    BSgenome.Mmusculus.UCSC.mm10,
     Cairo,
+    CerioliOutlierDetection,
     data.table,
+    DESeq2,
     digest,
+    dplyr,
+    ggplot2,
+    graphics,
+    grDevices,
     hash,
     magrittr,
     parallel,
+    patchwork,
+    robustbase,
     Rsamtools,
     stats,
-    ggplot2,
-    dplyr,
-    ggExtra,
-    DESeq2,
-    bedtoolsr,
-    patchwork
+    tools,
+    utils
 Suggests: 
     knitr,
     rmarkdown

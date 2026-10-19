@@ -7,6 +7,8 @@
 dlog(output, ...)
 }
 \arguments{
+\item{output}{Message to print.}
+
 \item{...}{something}
 }
 \value{

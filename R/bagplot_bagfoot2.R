@@ -19,10 +19,10 @@
 #' labels for HOMER-enriched motifs.
 #'
 #' @param dat Data frame containing bagplot input data.
-#' @param dataname1 Name of the first dataset (e.g., control).
-#' @param dataname2 Name of the second dataset (e.g., treatment).
+#' @param dataname1 Treatment condition name (title of the 'increase' panel).
+#' @param dataname2 Control condition name (title of the 'decrease' panel).
 #' @param qvaluethreshold_bagplot Threshold for q-value significance (default: 0.05).
-#' @param factor Factor for bagplot scaling (default: 3).
+#' @param factor Factor for bagplot scaling (default: 1.5).
 #' @param pdf Whether to save the plot as a PDF (default: TRUE).
 #' @param include_homer_results Whether to include HOMER results (default: FALSE).
 #' @param homer_results_file Path to the HOMER results file (e.g., knownResults.txt).
@@ -33,7 +33,7 @@
 #'   (maximum breakdown point) if a large fraction of motifs are expected to be
 #'   true positives. See robust_mahalanobis_test() in method.R.
 #' @param maha_barplot Whether to generate the Mahalanobis barplot figures (default: TRUE).
-#' @param maha_top_n Max bars per panel in the Mahalanobis barplots (default: 10).
+#' @param maha_top_n Max bars per panel in the Mahalanobis barplots (default: 20).
 #' @param maha_mode Which barplot layout(s) to produce:
 #'   \code{"padj"} = bar length is -log10(FDR), fill is D2;
 #'   \code{"D2"}   = bar length is D2, fill is FDR;
@@ -44,7 +44,7 @@ gen_bagplot_bagfoot2 <- function(
   dat, dataname1 = dataname1,
   dataname2 = dataname2,
   qvaluethreshold_bagplot = 0.05,
-  factor = 3,
+  factor = 1.5,
   pdf = TRUE,
   html = FALSE,
   noBag = FALSE,
@@ -60,7 +60,7 @@ gen_bagplot_bagfoot2 <- function(
   use_cluster_motif_db = TRUE,
   mcd_alpha = 0.75,
   maha_barplot = TRUE,
-  maha_top_n = 10,
+  maha_top_n = 20,
   maha_mode = "both") {
 
   # Prepare data
@@ -337,9 +337,7 @@ gen_bagplot_bagfoot2 <- function(
   v2[] <- lapply(v2, as.character)
 
   bagplottable <- merge(bagplottable, v2, by.x = "name", by.y = "cluster", all.x = TRUE)
-  print(colnames(bagplottable))
 
-  str(bagplottable)
   is_bad <- sapply(bagplottable, function(x) is.list(x) || is.data.frame(x))
   if (any(is_bad)) {
     warning("Non atomic columns in bagplottable: ",
@@ -363,9 +361,9 @@ gen_bagplot_bagfoot2 <- function(
       euclidean_distance = "udist",
       mahalanobis_distance_D2 = "D2",
       archetype_name = "name" ,          # name => archetype_name
-      D2_qvalue = "qvalue_mahalanobis",
+      D2_qvalue = "qvalue_bagplot",
       D2_pvalue = "pvalue",
-      D2_significant = "significant_mahalanobis"
+      D2_significant = "significant_bagplot"
     )
   if (include_homer_results) {
     bagplottable_export <- bagplottable_export %>% dplyr::rename(Homer_significant = "significant_homer")
@@ -374,7 +372,6 @@ gen_bagplot_bagfoot2 <- function(
     if ("Homer_significant" %in% names(bagplottable_export)) bagplottable_export$Homer_significant <- NULL
   }
 
-  str(bagplottable_export)
   required_cols <- c("motif_name","delta_FA","delta_FPD","category",
                      "mahalanobis_distance_D2","halfspace_depth","euclidean_distance",
                      "D2_pvalue","D2_qvalue","direction","D2_significant",
@@ -417,8 +414,8 @@ gen_bagplot_bagfoot2 <- function(
 
 
   # Save results to CSV (with all qvalues)
-  outputfilename = sprintf("bagplot_cutcount_diff_total_footprinting_depth_%s_%s", dataname2, dataname1)
-  write.csv(bagplottable_export, file = sprintf('%s_bagplot_output_TIGER.csv', outputfilename), row.names=FALSE)
+  outputfilename = sprintf("bagfoot2_cutcount_diff_total_footprinting_depth_%s_%s", dataname2, dataname1)
+  write.csv(bagplottable_export, file = sprintf('%s_bagfoot2_output.csv', outputfilename), row.names=FALSE)
 
   window_x_min <- min(bagplottable$log2_access_ratio[bagplottable$category %in% c("bag", "fence")], na.rm=TRUE)
   window_x_max <- max(bagplottable$log2_access_ratio[bagplottable$category %in% c("bag", "fence")], na.rm=TRUE)
@@ -578,8 +575,8 @@ gen_bagplot_bagfoot2 <- function(
 
   #if (pdf) {
 
-   # ggsave(sprintf("%s_TIGER_zoomIn.pdf", outputfilename), plot = bagplot,width=36, height=24, pointsize=24, useDingbats=FALSE)
-  #  ggsave(sprintf("%s_TIGER.pdf", outputfilename), plot = bagplot,width=18, height=14, pointsize=14, useDingbats=FALSE)
+    ggsave(sprintf("%s_bfoot2_zoomIn.pdf", outputfilename), plot = bagplot,width=36, height=24, pointsize=24, useDingbats=FALSE)
+    ggsave(sprintf("%s_bfoot2.pdf", outputfilename), plot = bagplot,width=18, height=14, pointsize=14, useDingbats=FALSE)
 
   #}
 
@@ -825,10 +822,10 @@ gen_bagplot_bagfoot2 <- function(
       combined    <- left_panel + right_panel +
         patchwork::plot_layout(ncol = 2, widths = c(1, 1))
 
-      ggplot2::ggsave(sprintf("%s_maha_%s_TIGER.pdf", outputfilename, suffix),
+      ggplot2::ggsave(sprintf("%s_maha_%s.pdf", outputfilename, suffix),
                       plot = combined, width = 18, height = plot_height)
 
-      ggplot2::ggsave(sprintf("%s_maha_%s_TIGER.tiff", outputfilename, suffix),
+      ggplot2::ggsave(sprintf("%s_maha_%s.tiff", outputfilename, suffix),
                       plot = combined, width = 18, height = plot_height,
                       dpi = 300, compression = "lzw")
 

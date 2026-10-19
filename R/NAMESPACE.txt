@@ -1,4 +1,0 @@
-useDynLib(masa, .registration = TRUE)
-export(writeBGRperChromosomeR)
-R CMD build masa
-R CMD INSTALL masa_1.0.tar.gz

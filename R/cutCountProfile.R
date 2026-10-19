@@ -87,15 +87,11 @@ loadChromosomeRange<-function(refgenome) {
 
 # call the function writeBGRperChromosomeInt in the code bagfoot.so compiled from a C code bagfoot_calc.c
 
-#' @param bgrfilename
 #'
-#' @param chr
-#' @param count
-#' @param binsize
-#' @param threshold
 #'
 # @useDynLib bagfoot writeBGRperChromosomeInt
 #' @useDynLib bagfoot2 writeBGRperChromosomeInt
+#' @noRd
 writeBGRperChromosomeR<-function(bgrfilename, chr, count, binsize=20, threshold=2) {
   countsize= length(count);
 

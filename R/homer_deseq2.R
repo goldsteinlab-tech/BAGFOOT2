@@ -8,7 +8,7 @@
 #' @param input_file Character. Path to the input hotspot file.
 #' @param output_file Character. Path to the output formatted file.
 #' @param sep_in Character. Input file separator (default: ",").
-#' @param sep_out Character. Output file separator (default: "\t").
+#' @param sep_out Character. Output file separator (default: "\\t").
 #' @param skip_lines Integer. Number of lines to skip at the start of the input file (default: 1).
 #'
 #' @return None. Writes a formatted file to \code{output_file}.
@@ -413,7 +413,7 @@ run_diff_expression <- function(homer_bin, work_dir, annotate_outfile, diffexp_o
 #'
 #' @param input_path Character. Directory containing the input file.
 #' @param input_filename Character. Name of the input file.
-#' @param sep Character. Separator used in the input file (default: "\t").
+#' @param sep Character. Separator used in the input file (default: "\\t").
 #' @param chr Character. Column name for chromosome (default: "Chr").
 #' @param start Character. Column name for start position (default: "Start").
 #' @param end Character. Column name for end position (default: "End").

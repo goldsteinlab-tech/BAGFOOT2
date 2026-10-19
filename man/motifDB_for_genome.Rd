@@ -4,13 +4,13 @@
 \alias{motifDB_for_genome}
 \title{Build a MotifDB object for a given genome, downloading files if needed}
 \usage{
-motifDB_for_genome(genome, cache_dir = tiger_cache_dir(), force = FALSE)
+motifDB_for_genome(genome, cache_dir = bagfoot2_cache_dir(), force = FALSE)
 }
 \arguments{
 \item{genome}{Character string. The genome build needed ("mm10" or "hg38").}
 
 \item{cache_dir}{Character string. Root directory to look in / download to.
-Defaults to \code{tiger_cache_dir()}.}
+Defaults to \code{bagfoot2_cache_dir()}.}
 
 \item{force}{Logical. If TRUE, forces a re-download even if files exist.}
 }
@@ -18,8 +18,8 @@ Defaults to \code{tiger_cache_dir()}.}
 A \code{MotifDB} object pointing to the resolved directory.
 }
 \description{
-Convenience wrapper for users running TIGER directly in R (as opposed to
+Convenience wrapper for users running BAGFOOT2 directly in R (as opposed to
 the command-line wrapper): resolves/downloads the motifDB files for the
 requested genome and returns a ready-to-use \code{MotifDB} object, with
-paths built the same way \code{tiger_wrapper.R} builds them.
+paths built the same way \code{bagfoot2_wrapper.R} builds them.
 }

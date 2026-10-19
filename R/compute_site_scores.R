@@ -1,6 +1,6 @@
-#' Compute site-level scores following TIGER logic
+#' Compute site-level scores following BAGFOOT2 logic
 #'
-#' TIGER-like definitions:
+#' BAGFOOT2-like definitions:
 #' - window: +/- 200 bp around motif
 #' - motif region: motifcenter +/- motif width, extended by motifbuffer
 #' - flanking region: all positions outside motif region
@@ -12,10 +12,10 @@
 #' @param tdensity cut count list per chromosome
 #' @param motifwidth integer, motif width
 #' @param motifcenter integer, motif center position (0 = infer from motif width)
-#' @param halfspan integer, half-window around motif center; TIGER-like default = 200
+#' @param halfspan integer, half-window around motif center; BAGFOOT2-like default = 200
 #' @param nuccodes nucleotide code list
 #' @param ftable bias table
-#' @param motifbuffer integer, motif offset around motif region; TIGER-like default = 2
+#' @param motifbuffer integer, motif offset around motif region; BAGFOOT2-like default = 2
 #' @param pseudocount numeric, small value to avoid division by zero
 #' @param trim numeric, trimming proportion for mean
 #' @param outfile optional output file path

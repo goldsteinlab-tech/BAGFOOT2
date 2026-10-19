@@ -1,7 +1,7 @@
 # Fonction runGfoot
-#' Run GFoot TIGER Analysis
+#' Run GFoot BAGFOOT2 Analysis
 #'
-#' Runs the main GFoot TIGER analysis, generating footprinting results and plots.
+#' Runs the main GFoot BAGFOOT2 analysis, generating footprinting results and plots.
 #'
 #' @param Gfoot GFoot object containing analysis parameters and data.
 #' @param range Optional. Range of motifs to analyze.
