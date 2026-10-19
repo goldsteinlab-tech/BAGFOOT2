@@ -1,7 +1,7 @@
 Package: bagfoot2
 Title: Differential Transcription Factor Footprinting from ATAC-seq
 Version: 2.0.0
-Authors@R: 
+Authors@R:
     person("Leslie", "Cohen", , "leslie.cohen@mail.huji.ac.il", role = c("aut", "cre"))
 Description: Predicts which transcription factors change their activity
     between two conditions from ATAC-seq data, by combining Tn5 bias-corrected
@@ -14,22 +14,20 @@ BugReports: https://github.com/goldsteinlab-tech/BAGFOOT2/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports: 
+Imports:
     aplpack,
-    bedtoolsr,
     BSgenome.Hsapiens.UCSC.hg38,
     BSgenome.Mmusculus.UCSC.mm10,
-    Cairo,
     CerioliOutlierDetection,
     data.table,
-    DESeq2,
     digest,
     dplyr,
+    GenomicRanges,
     ggplot2,
     graphics,
     grDevices,
     hash,
-    magrittr,
+    IRanges,
     parallel,
     patchwork,
     robustbase,
@@ -37,7 +35,10 @@ Imports:
     stats,
     tools,
     utils
-Suggests: 
+Suggests:
+    BSgenome.Hsapiens.UCSC.hg19,
+    BSgenome.Mmusculus.UCSC.mm9,
+    DESeq2,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
