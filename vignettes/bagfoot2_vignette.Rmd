@@ -27,7 +27,7 @@ Code: https://github.com/goldsteinlab-tech/BAGFOOT2
 knitr::kable(
   data.frame(
     Feature = c("Motif database", "Statistics", "Main output",
-                "Interface", "Motif/nuccode files", "HOMER replicates"),
+                "Interface", "Motif files", "HOMER replicates"),
     BaGFoot = c("Individual motifs", "Bagplot (classical depth)", "Bagplot",
                 "R functions", "Manual download", "Same number per condition"),
     BAGFOOT2 = c("Archetype motif clusters (mm10: 577, hg38: 636)",
@@ -101,13 +101,12 @@ Replicate numbers can differ between conditions (`--reps_control 1,2,3 --reps_tr
 
 ### 4. Motif files (`--mm_files_dir`, optional)
 
-Archetype motif occurrences (FIMO genome-wide scan), motif lists and nuccode (hexamer index) files. If `--mm_files_dir` is not given, the mm10 or hg38 files are downloaded automatically from Zenodo (https://zenodo.org/records/20782782; ~6.4 GB for mm10, ~7.1 GB for hg38) and cached. On a shared server, set the environment variable `BAGFOOT2_MOTIF_DB_DIR` to a folder that already contains the files to avoid downloading them again.
+Archetype motif occurrences (FIMO genome-wide scan) and motif lists. If `--mm_files_dir` is not given, the mm10 or hg38 files are downloaded automatically from Zenodo (https://zenodo.org/records/20782782; ~6.4 GB for mm10, ~7.1 GB for hg38) and cached. On a shared server, set the environment variable `BAGFOOT2_MOTIF_DB_DIR` to a folder that already contains the files to avoid downloading them again.
 
 Expected content:
 
 - `motiflist_<genome>_cluster.txt`
 - `<genome>_cluster_fimo/`
-- `nuccode_<genome>_6mer_<chr>.dat`
 - `all_cluster_motifs.motifs` (for HOMER)
 
 ## Quick start (command line)
@@ -159,7 +158,7 @@ knitr::kable(
     Description = c("Merged BAMs (+ replicate BAMs for HOMER)",
                     "MACS2 peak files",
                     "Output directory (created if needed)",
-                    "Motif/nuccode files directory",
+                    "Motif files directory",
                     "Condition names (file prefixes)",
                     "mm9, mm10, hg18, hg19 or hg38",
                     "Suffix of merged BAM files",
@@ -195,9 +194,9 @@ From each BAM, BAGFOOT2 counts the observed frequency of each 6-mer at Tn5 inser
 **Bias factor application.**
 The O/E ratios are used as bias-correction factors to derive the expected count per position; observed counts are normalized by these expected counts before footprinting.
 
-#### 1. Nucleotide code files (once per genome)
+#### 1. Nucleotide code files
 
-For each chromosome, nuccode files (`nuccode_<genome>_6mer_<chr>.dat`) encode the 6-mer at each genomic position. They are provided with the motif files and reused for all samples.
+For each chromosome, nuccode files (`nuccode_<genome>_6mer_<chr>.dat`) encode the 6-mer at each genomic position. They are generated automatically in the output directory during the first run, and reused if the run is relaunched.
 
 #### 2. BedGraph files
 
@@ -225,12 +224,12 @@ MACS2 peaks are converted to a standardized table (`<condition>_peaks.csv`).
 ```{r, echo=FALSE}
 knitr::kable(
   data.frame(
-    Step = c("Nuccode files (once per genome)",
+    Step = c("Nuccode files",
              "BedGraph (Tn5 offset corrected)",
              "Hexamer table",
              "Peak reformatting"),
     `Output (per condition)` = c(
-      "nuccode_<genome>_6mer_<chr>.dat (shared by all conditions)",
+      "nuccode_<genome>_6mer_<chr>.dat (shared by both conditions)",
       "<condition>_AC_cutcount.bgr.gz",
       "Hexamer_<condition>_<genome>_withoutMap.txt",
       "<condition>_peaks.csv"),
