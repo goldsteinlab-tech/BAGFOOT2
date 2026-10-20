@@ -233,7 +233,7 @@ for (treat in c(set1, set2)) {
 }
 
 temp_f <- list.files(bg_dir, pattern = glob2rx("temp*.dat"), full.names = TRUE)
-if (length(temp_f) > 0) file.remove(temp_f)
+if (length(temp_f) > 0) invisible(file.remove(temp_f))
 
 # ============================ 5. MERGING THE PAIR =============================
 cat("\n>>> Step 2: Merging control and treatment...\n")
@@ -329,6 +329,10 @@ if (run_homer_flag) {
                         rep(set1, length(ctrl_indices)),
                         rep(set2, length(treat_indices)))
 
+    # run_annotate_peak() changes the working directory to the BAM folder:
+    # come back to the output folder so the differential peak files are written there
+    setwd(bg_dir)
+
     # No differential peak -> warn and continue without HOMER
     no_diff_peaks <- FALSE
     tryCatch({
@@ -355,7 +359,11 @@ if (run_homer_flag) {
       target_bed <- file.path(bg_dir, "my_peaks_simple.bed")
       if (!file.exists(target_bed)) {
         misplaced_bed <- file.path(bam_dir, "my_peaks_simple.bed")
-        if (file.exists(misplaced_bed)) file.rename(misplaced_bed, target_bed)
+        # copy + remove instead of file.rename(): rename fails when the BAM folder and
+        # the output folder are on different disks ("Invalid cross-device link")
+        if (file.exists(misplaced_bed) && file.copy(misplaced_bed, target_bed)) {
+          invisible(file.remove(misplaced_bed))
+        }
       }
 
       if (!file.exists(target_bed)) {
