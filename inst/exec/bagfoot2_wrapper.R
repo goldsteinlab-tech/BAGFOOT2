@@ -79,7 +79,7 @@ opt <- parse_args(opt_parser, print_help_and_exit = FALSE)
 
 if (opt$help) {
   cat("BAGFOOT2: differential transcription factor footprinting from ATAC-seq\n\n")
-  cat("Version:   2.0.0\n")
+  cat("Version:   2.0.1\n")
   cat("About:     developed in the Goldstein Lab.\n")
   cat("Code:      https://github.com/goldsteinlab-tech/BAGFOOT2\n\n")
   print_help(opt_parser)
@@ -196,18 +196,32 @@ for (treat in c(set1, set2)) {
     cat(paste("   Processing:", treat, "\n"))
 
     countReadsBAM(bamfile, mm)
-    makeCutCountBAMWithName(bamfile, name = treat, refgenome = mm)
 
-    invisible(capture.output({
-      MakeBiasCorrectionTableBAM(
-        bamfile   = bamfile,
-        outfile   = paste0("Hexamer_", treat, "_", mm, "_withoutMap.txt"),
-        refgenome = mm,
-        np        = 6,
-        atac      = TRUE,
-        mapdir    = ""
-      )
-    }))
+    # The BedGraph and the hexamer table are the longest pre-processing steps:
+    # they are skipped if they already exist (e.g. when a run is relaunched).
+    bedgraph_file <- file.path(bg_dir, paste0(treat, "_AC_cutcount.bgr.gz"))
+    hexamer_file  <- file.path(bg_dir, paste0("Hexamer_", treat, "_", mm, "_withoutMap.txt"))
+
+    if (file.exists(bedgraph_file) && file.info(bedgraph_file)$size > 0) {
+      cat("     [SKIP] BedGraph already exists\n")
+    } else {
+      makeCutCountBAMWithName(bamfile, name = treat, refgenome = mm)
+    }
+
+    if (file.exists(hexamer_file) && file.info(hexamer_file)$size > 0) {
+      cat("     [SKIP] Hexamer table already exists\n")
+    } else {
+      invisible(capture.output({
+        MakeBiasCorrectionTableBAM(
+          bamfile   = bamfile,
+          outfile   = paste0("Hexamer_", treat, "_", mm, "_withoutMap.txt"),
+          refgenome = mm,
+          np        = 6,
+          atac      = TRUE,
+          mapdir    = ""
+        )
+      }))
+    }
 
     peak_file_in <- file.path(peak_dir, paste0(treat, opt$peak_suffix))
     if (!file.exists(peak_file_in)) stop(paste("Peak file not found:", peak_file_in))

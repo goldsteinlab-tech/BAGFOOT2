@@ -5,7 +5,7 @@ output:
   rmarkdown::html_vignette:
     css: style.css
 vignette: >
-  %\VignetteIndexEntry{BAGFOOT2: differential TF footprinting from ATAC-seq}
+  %\VignetteIndexEntry{BAGFOOT2: differential transcription factor footprinting from ATAC-seq}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -180,7 +180,7 @@ knitr::kable(
 
 Run `bagfoot2 --help` for the full list.
 
-Interrupted runs can simply be relaunched with the same command: completed motif batches are detected and skipped.
+Interrupted runs can simply be relaunched with the same command: the pre-processing files (BedGraph, hexamer tables) and the completed motif batches are detected and skipped.
 
 ## How does BAGFOOT2 work?
 
