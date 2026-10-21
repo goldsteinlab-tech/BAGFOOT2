@@ -79,7 +79,7 @@ opt <- parse_args(opt_parser, print_help_and_exit = FALSE)
 
 if (opt$help) {
   cat("BAGFOOT2: differential transcription factor footprinting from ATAC-seq\n\n")
-  cat("Version:   2.0.1\n")
+  cat("Version:   2.0.2\n")
   cat("About:     developed in the Goldstein Lab.\n")
   cat("Code:      https://github.com/goldsteinlab-tech/BAGFOOT2\n\n")
   print_help(opt_parser)

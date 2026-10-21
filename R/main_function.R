@@ -862,8 +862,8 @@ calcNormalizedExpectedObservedCounts <- function (sites, S, cache, basehalfwidth
     #print(paste("subrange_st:",subrange_st,"subrange_ed:",subrange_ed))
     #browser()
 
-    print(paste("subrange_st:", subrange_st, "subrange_ed:", subrange_ed))
-    print((counts$expected))
+    if (BFOOT_DEBUG) print(paste("subrange_st:", subrange_st, "subrange_ed:", subrange_ed))
+    if (BFOOT_DEBUG) print(counts$expected)
     #print(paste("expected head:",head(expected) ))
     #print(paste("summary de expected:",    summary(as.vector(expected))))
 

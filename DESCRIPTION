@@ -1,6 +1,6 @@
 Package: bagfoot2
 Title: Differential Transcription Factor Footprinting from ATAC-seq
-Version: 2.0.1
+Version: 2.0.2
 Authors@R: 
     person("Leslie", "Cohen", , "leslie.cohen@mail.huji.ac.il", role = c("aut", "cre"))
 Description: Predicts which transcription factors change their activity
