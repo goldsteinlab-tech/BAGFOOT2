@@ -226,6 +226,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>BAGFOOT2 is distributed through conda:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> create <span class="at">-n</span> bagfoot2 <span class="at">-c</span> goldsteinlab-tech <span class="at">-c</span> conda-forge <span class="at">-c</span> bioconda bagfoot2</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> activate bagfoot2</span></code></pre></div>
+<p><strong>System requirements:</strong> Linux (or Windows with WSL2), about <strong>16 GB of RAM per core</strong> (<code>--cores</code>; use <code>--cores 1</code> on a machine with 16–24 GB) and 20–50 GB of free disk space for the output folder.</p>
 <p><code>samtools</code> must be available in the environment, as well as the BSgenome package of your genome (e.g. <code>BSgenome.Mmusculus.UCSC.mm10</code>, <code>BSgenome.Hsapiens.UCSC.hg38</code>). HOMER is optional (see below).</p>
 </div>
 <div id="project-structure" class="section level2">
@@ -625,6 +626,7 @@ fasted_1.bam  fasted_2.bam</code></pre>
 <div id="running-bagfoot2-step-by-step-in-r" class="section level2">
 <h2>Running BAGFOOT2 step by step in R</h2>
 <p>The command-line tool runs the code below. Running it in R is useful to inspect intermediate objects.</p>
+<p>A ready-to-use R Markdown version of this workflow, where you only edit the lines marked <code># &lt;-- EDIT</code>, is available on GitHub: <a href="https://github.com/goldsteinlab-tech/BAGFOOT2/blob/main/inst/scripts/bagfoot2_step_by_step.Rmd">inst/scripts/bagfoot2_step_by_step.Rmd</a>. After installing the package, it is also found with <code>system.file(&quot;scripts&quot;, &quot;bagfoot2_step_by_step.Rmd&quot;, package = &quot;bagfoot2&quot;)</code>.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(bagfoot2)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>numcores <span class="ot">&lt;-</span> <span class="dv">4</span></span>

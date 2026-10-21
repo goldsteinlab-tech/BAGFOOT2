@@ -32,6 +32,9 @@ The vignette provides:
 - guidance on project structure and inputs,
 - full description of footprinting, statistics, and output files.
 
+📄 **Step-by-step R Markdown script** (edit only the lines marked `# <-- EDIT`):  
+[inst/scripts/bagfoot2_step_by_step.Rmd](inst/scripts/bagfoot2_step_by_step.Rmd)
+
 ## Motif files (Zenodo)
 
 The genome-wide archetype motif occurrences (**MotifDB**) and hexamer index (**nuccode**) files for **mm10** and **hg38** are available on Zenodo:
@@ -82,6 +85,14 @@ bagfoot2 \
 ```
 
 Add `--homer TRUE --homer_bin /path/homer/bin --reps_control 1,2,3 --reps_treatment 1,2,3` to include HOMER motif enrichment.
+
+---
+
+## System Requirements
+
+* Linux (or Windows with WSL2), conda
+* **Memory: about 16 GB of RAM per core** (`--cores`). On a machine with 16–24 GB, use `--cores 1`.
+* Disk: about 20–50 GB free for the output folder
 
 ---
 

@@ -74,6 +74,8 @@ conda create -n bagfoot2 -c goldsteinlab-tech -c conda-forge -c bioconda bagfoot
 conda activate bagfoot2
 ```
 
+**System requirements:** Linux (or Windows with WSL2), about **16 GB of RAM per core** (`--cores`; use `--cores 1` on a machine with 16–24 GB) and 20–50 GB of free disk space for the output folder.
+
 `samtools` must be available in the environment, as well as the BSgenome package of your genome (e.g. `BSgenome.Mmusculus.UCSC.mm10`, `BSgenome.Hsapiens.UCSC.hg38`). HOMER is optional (see below).
 
 ## Project structure
@@ -349,6 +351,8 @@ knitr::kable(
 ## Running BAGFOOT2 step by step in R
 
 The command-line tool runs the code below. Running it in R is useful to inspect intermediate objects.
+
+A ready-to-use R Markdown version of this workflow, where you only edit the lines marked `# <-- EDIT`, is available on GitHub: [inst/scripts/bagfoot2_step_by_step.Rmd](https://github.com/goldsteinlab-tech/BAGFOOT2/blob/main/inst/scripts/bagfoot2_step_by_step.Rmd). After installing the package, it is also found with `system.file("scripts", "bagfoot2_step_by_step.Rmd", package = "bagfoot2")`.
 
 ```{r, eval=FALSE}
 library(bagfoot2)

@@ -1,0 +1,403 @@
+---
+title: "BAGFOOT2_prep"
+author: "lc"
+date: "20/10/2026"
+output: html_document
+---
+
+> **Before running this script:** edit only the lines marked with `# <-- EDIT` in the two **USER SETTINGS** blocks below (*Environment* and *HOMER*). Nothing else needs to be changed.
+
+## Load packages
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(bagfoot2)
+library(stringr)
+library(dplyr)
+```
+
+## Environment
+
+General definitions for the project: name, merged BAM folder, MACS2 folder, genome version and motif files folder.
+For each project, define the conditions (`all_set`) and the pairs of conditions to compare (`couples`).
+
+```{r}
+# ==============================================================================
+# USER SETTINGS: edit the lines marked with  # <-- EDIT
+# ==============================================================================
+
+numcores <- 2                                    # <-- EDIT: number of CPU cores to use
+
+project <- "fed_fasted"                          # <-- EDIT: project name
+mm      <- "mm10"                                # <-- EDIT: genome version (mm10 or hg38)
+
+# input and output folders (paths must end with "/")
+bg_dir    <- paste0("/path/to/bg_files_", project, "/")   # <-- EDIT: output directory
+macs2_dir <- paste0("/path/to/", project, "/macs2/")      # <-- EDIT: MACS2 peak files
+bam_dir   <- paste0("/path/to/", project, "/bam_merged/") # <-- EDIT: merged (and replicate) BAM files
+
+mm_files_dir <- "/path/to/mm10_files/"     # <-- EDIT: motif files folder
+# or, to download the motif files automatically from Zenodo:
+# mm_files_dir <- ensure_motif_db(mm)
+
+if (project == "fed_fasted") {
+
+  # set1 is the control, set2 is the treatment
+  all_set <- c("fed", "fasted")                  # <-- EDIT: conditions (control first)
+
+  # in couples: CONTROL first, then a hyphen (-, not an underscore), then the TREATMENT
+  couples <- c("fed-fasted")                     # <-- EDIT: control-treatment
+}
+
+# ==============================================================================
+# END OF USER SETTINGS (no change needed below)
+# ==============================================================================
+
+assignInNamespace("MCCORES",       as.integer(numcores), ns = "bagfoot2")   # footprinting workers
+assignInNamespace("MCCORES_MOTIF", 1L,                   ns = "bagfoot2")   # motifs computed at the same time
+assignInNamespace("BFOOT_DEBUG",   FALSE,                ns = "bagfoot2")   # TRUE prints large debug matrices (can crash RStudio)
+
+# create the output directory if it does not exist yet
+dir.create(bg_dir, showWarnings = FALSE, recursive = TRUE)
+
+knitr::opts_knit$set(root.dir = bg_dir)
+```
+
+## Pre-processing (once per condition)
+
+For each condition:
+
+- a BedGraph file of Tn5 cut counts is created (duplicate reads removed),
+- a hexamer (6-mer) bias table is generated, used to correct the Tn5 sequence bias,
+- the MACS2 peaks are converted to a standardized CSV table.
+
+This step produces:
+
+A) 3 files per condition:
+
+1. BedGraph (`<condition>_AC_cutcount.bgr.gz`)
+2. Hexamer bias table (`Hexamer_<condition>_<genome>_withoutMap.txt`)
+3. Peaks in CSV format (`<condition>_peaks.csv`)
+
+B) 2 files per couple:
+
+1. Combined peaks (`pooled_<control>_<treatment>_hotspot.csv`)
+2. Combined hexamer table (`Hexamer_<control>_<treatment>_merged_withoutMap.csv`)
+
+```{r}
+setwd(bg_dir)
+
+for (treat in all_set) {
+  bamfile <- paste0(bam_dir, treat, ".sorted.bam")
+
+  # count the number of cuts in the BAM file
+  cc <- countReadsBAM(bamfile, mm)
+  print(paste("treat:", treat, "cc:", cc))
+  assign(paste0("cc_", treat), cc)
+
+  # The two steps below are the longest of the pre-processing.
+  # If their output files already exist (e.g. when the script is run again),
+  # they are skipped. To recompute them, delete these files first.
+  bedgraph_file <- paste0(bg_dir, treat, "_AC_cutcount.bgr.gz")
+  hexamer_file  <- paste0(bg_dir, "Hexamer_", treat, "_", mm, "_withoutMap.txt")
+
+  # generate the BedGraph file of cut counts
+  if (!file.exists(bedgraph_file)) {
+    cutcountfile <- makeCutCountBAMWithName(bamfile,
+                                            name      = basenameWithoutExt(bamfile),
+                                            refgenome = mm)
+  } else {
+    message("BedGraph already exists for ", treat, ": skipped")
+  }
+
+  # hexamer bias frequency table (without mappability)
+  if (!file.exists(hexamer_file)) {
+    MakeBiasCorrectionTableBAM(bamfile   = bamfile,
+                               outfile   = paste0("Hexamer_", treat, "_", mm, "_withoutMap.txt"),
+                               refgenome = mm,
+                               np        = 6,
+                               atac      = TRUE,   # ATAC-seq data (same as the bagfoot2 command)
+                               mapdir    = "")     # empty: mappability is not used
+  } else {
+    message("Hexamer table already exists for ", treat, ": skipped")
+  }
+
+  # convert MACS2 peaks to CSV
+  macs <- read.csv(paste0(macs2_dir, treat, "_peaks.narrowPeak"),
+                   sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+  names(macs)[1:3] <- c("chr", "st", "ed")
+  nr <- nrow(macs)
+
+  hotspot <- data.frame(ID = 1:nr, chrom. = macs$chr, start = macs$st + 1, end = macs$ed,
+                        MaxD   = rep(0, nr),
+                        AveD   = rep(0, nr),
+                        Zscore = rep(0, nr),
+                        pvalue = rep(0, nr))
+
+  write.table(hotspot, file = paste0(bg_dir, treat, "_peaks.csv"), sep = ",", row.names = FALSE)
+}
+
+# remove temporary files
+temp <- list.files(bg_dir,
+                   pattern    = glob2rx("temp*.dat"),
+                   recursive  = TRUE,
+                   full.names = TRUE)
+file.remove(temp)
+
+# merge the files of each couple
+setwd(bg_dir)
+for (c in couples) {
+  print(c)
+  set1 <- str_split_fixed(c, "-", 2)[1]   # control
+  set2 <- str_split_fixed(c, "-", 2)[2]   # treatment
+
+  # combined peaks (common peak universe for both conditions)
+  assign(paste0(set1, "_", set2, "_peaks"), combineTwoHotspots(
+    paste0(bg_dir, set1, "_peaks.csv"),
+    paste0(bg_dir, set2, "_peaks.csv"),
+    set1, set2))
+
+  # remove the duplicated ID column if present
+  pooled <- read.csv(paste0(bg_dir, "pooled_", set1, "_", set2, "_hotspot.csv"))
+  if ("ID.1" %in% colnames(pooled)) {
+    pooled <- pooled %>%
+      dplyr::select(-ID.1)
+    write.csv(pooled, paste0(bg_dir, "pooled_", set1, "_", set2, "_hotspot.csv"), row.names = FALSE)
+  }
+
+  # combined hexamer table (same bias correction for both conditions)
+  assign(paste0("Hexamer_", set1, "_", set2), merge_two_frequency_tables(
+    paste0("Hexamer_", set1, "_", mm, "_withoutMap.txt"),
+    paste0("Hexamer_", set2, "_", mm, "_withoutMap.txt"),
+    paste0("Hexamer_", set1, "_", set2, "_merged_withoutMap.csv")))
+}
+```
+
+## HOMER: differential peaks and motif enrichment (optional)
+
+HOMER must be installed (http://homer.ucsd.edu/homer/introduction/install.html), with the genome installed.
+The replicate BAM files must be in `bam_dir`, named `<condition>_<index>.bam` (e.g. `fed_1.bam`, `fed_2.bam`).
+Only the replicates listed below are used.
+If the HOMER results of a couple already exist (`homer_motif_res_<control>_<treatment>/knownResults.txt`), HOMER is skipped for this couple. To run it again, delete this folder first.
+
+```{r}
+setwd(bg_dir)
+
+# ==============================================================================
+# USER SETTINGS (HOMER): edit the lines marked with  # <-- EDIT
+# ==============================================================================
+
+use_homer <- TRUE                                    # <-- EDIT: FALSE to skip HOMER
+
+homer_bin <- "/path/to/homer/bin/"    # <-- EDIT: HOMER bin directory
+
+# replicate indices of each condition (the numbers can differ, e.g. 1:3 and 1:2)
+reps_control   <- 1:3   # <-- EDIT: fed_1.bam, fed_2.bam, fed_3.bam
+reps_treatment <- 1:3   # <-- EDIT: fasted_1.bam, fasted_2.bam, fasted_3.bam
+
+# thresholds to select the differential peaks
+padj_cutoff <- 0.05     # <-- EDIT (optional): adjusted p-value
+l2fc_cutoff <- 0.5      # <-- EDIT (optional): |log2 fold change|
+
+# ==============================================================================
+# END OF USER SETTINGS (no change needed below)
+# ==============================================================================
+
+# directory containing the replicate BAM files
+work_dir <- bam_dir
+
+if (use_homer) {
+  for (c in couples) {
+    set1 <- str_split_fixed(c, "-", 2)[1]   # control
+    set2 <- str_split_fixed(c, "-", 2)[2]   # treatment
+
+    output_folder <- paste0(bg_dir, "homer_motif_res_", set1, "_", set2)
+    if (file.exists(file.path(output_folder, "knownResults.txt"))) {
+      message("HOMER results already exist for ", c, ": skipped")
+      next
+    }
+
+    # output files
+    annotate_outfile <- file.path(bg_dir, paste0(set1, "_", set2, "_annot.txt"))    # annotatePeaks.pl
+    diffexp_outfile  <- file.path(bg_dir, paste0(set1, "_", set2, "_output.txt"))   # getDiffExpression.pl
+
+    # groups for getDiffExpression.pl: one label per replicate
+    group1 <- rep(set1, length(reps_control))     # control
+    group2 <- rep(set2, length(reps_treatment))   # treatment
+
+    # convert the merged peak file to the HOMER format
+    input_file1  <- file.path(bg_dir, paste0("pooled_", set1, "_", set2, "_hotspot.csv"))
+    output_file1 <- file.path(bg_dir, paste0("pooled_", set1, "_", set2, "_hotspot_modify.txt"))
+
+    process_hotspot_file(
+      input_file1,
+      output_file1
+    )
+
+    # 1. create one tag directory per replicate (in the BAM directory), only for this couple
+    td_dirs <- c()
+    for (cond in c(set1, set2)) {
+      reps <- if (cond == set1) reps_control else reps_treatment
+      for (i in reps) {
+        bam_rep <- file.path(work_dir, paste0(cond, "_", i, ".bam"))
+        td_dir  <- file.path(work_dir, paste0("TD_", cond, "_", i))
+        if (!file.exists(bam_rep)) stop("Replicate BAM not found: ", bam_rep)
+        if (!dir.exists(td_dir)) {
+          system(paste(file.path(homer_bin, "makeTagDirectory"), td_dir, bam_rep, "-format sam"))
+        } else {
+          message("Tag directory already exists: ", basename(td_dir))
+        }
+        td_dirs <- c(td_dirs, td_dir)
+      }
+    }
+
+    # 2. count tags per peak (annotatePeaks.pl)
+    run_annotate_peak(homer_bin, work_dir, output_file1, mm, td_dirs, annotate_outfile)
+
+    # 3. differential analysis (getDiffExpression.pl, DESeq2)
+    run_diff_expression(
+      homer_bin,
+      work_dir,
+      annotate_outfile,
+      diffexp_outfile,
+      group1,
+      group2
+    )
+
+    # 4. keep differential peaks only: BED file + table with log2FC, padj and p-value
+    setwd(bg_dir)   # important: the files are created in the working directory
+    diff_prefix <- paste0(set1, "_", set2, "_diff_peaks")
+    create_diff_peak_files(
+      input_path     = bg_dir,
+      input_filename = basename(diffexp_outfile),
+      sep            = "\t",
+      chr            = "Chr",
+      start          = "Start",
+      end            = "End",
+      padj_cutoff    = padj_cutoff,
+      l2fc_cutoff    = l2fc_cutoff,
+      output_prefix  = diff_prefix
+    )
+
+    # 5. motif enrichment on the differential peaks (findMotifsGenome.pl)
+    input_bed   <- paste0(bg_dir, diff_prefix, "_simple.bed")
+    homer_exe   <- file.path(homer_bin, "findMotifsGenome.pl")
+    motif_file  <- system.file("data", "all_cluster_motifs.motifs", package = "bagfoot2")
+    extra_args1 <- paste("-mknown", motif_file, "-p", numcores)
+
+    run_homer(
+      input_bed,
+      output_folder,
+      mm,
+      homer_exe,
+      extra_args1
+    )
+  }
+}
+```
+
+## Footprinting, statistics and plots
+
+Bias-corrected footprinting is computed for all archetype motifs (batches of 25 motifs).
+Then the robust Mahalanobis distance (MCD) is computed for each motif, and the bagplot, the D2 / FDR barplots and the result table are generated.
+
+```{r}
+setwd(bg_dir)
+
+# one CutCount object per condition, from its BedGraph file
+for (treat in all_set) {
+  assign(treat, CutCount(file  = paste0(bg_dir, treat, "_AC_cutcount.bgr.gz"),   # BedGraph file
+                         count = 1,                                               # placeholder
+                         name  = treat))                                          # data name
+}
+
+# motif database: archetype motif clusters (FIMO genome-wide scan)
+motifdb_mm <- MotifDB(
+  motiflistfile = paste0(mm_files_dir, "motiflist_", mm, "_cluster.txt"),   # list of motifs
+  directory     = paste0(mm_files_dir, mm, "_cluster_fimo"))               # directory of motif files
+motif_no <- switch(mm, "mm10" = 577, "hg38" = 636)   # total number of motifs, do not change
+
+for (c in couples) {
+  print(paste("c ----------------------->", c))
+  set1 <- str_split_fixed(c, "-", 2)[1]   # control
+  set2 <- str_split_fixed(c, "-", 2)[2]   # treatment
+
+  # HOMER results of this couple (used only if they exist)
+  homer_results_file <- paste0(bg_dir, "homer_motif_res_", set1, "_", set2, "/knownResults.txt")
+  use_homer_results  <- exists("use_homer") && use_homer && file.exists(homer_results_file)
+
+  gfootoption_couple <- GFootOption(biasfile        = paste0("Hexamer_", set1, "_", set2, "_merged_withoutMap.csv"),   # merged hexamer bias table
+                                    hexamer_pattern = paste0("nuccode_", mm, "_6mer_{chr}.dat"))                     # nucleotide code files
+  setwd(bg_dir)
+
+  # restart: find the batches already done
+  output_files <- list.files(bg_dir,
+                             pattern   = glob2rx(paste0(set1, "_", set2, "_On_pooled_", set1, "_", set2,
+                                                        "_hotspot_footprint_depth_table", ".csv")),
+                             recursive = TRUE)
+  if (length(output_files) == 0) {
+    start_motif <- 1
+  } else {
+    # starting motif = last batch done (from the folder name) + 25
+    start_motif <- dirname(output_files) %>%                  # directory name
+      str_split(., "\\_", simplify = TRUE) %>%                # split by underscore
+      as.data.frame(stringsAsFactors = FALSE) %>%
+      dplyr::select(tail(names(.), 1)) %>%                     # keep the last column
+      mutate_if(is.character, as.numeric) %>%                  # convert to numeric
+      max + 25                                                 # last batch + 25
+  }
+
+  # footprinting by batches of 25 motifs
+  if (start_motif < motif_no) {
+    for (r in seq(start_motif, motif_no, by = 25)) {
+      print(paste("r ---------------------->", r))
+      GFoot_obj <- GFoot(control     = get(set1),                                         # control data
+                         treatment   = get(set2),                                         # treatment data
+                         sitefile    = paste0("pooled_", set1, "_", set2, "_hotspot.csv"),   # combined peaks
+                         motifDB     = motifdb_mm,                                        # FIMO motifs
+                         gfootoption = gfootoption_couple,                                # bias and hexamer files
+                         outputdir   = paste0("OUTPUT_", c, "_", r),                      # output directory
+                         cachedir    = paste0("CACHE_", c, "_", r))                       # cache directory
+
+      res_couple <- run(GFoot_obj, graphout = TRUE, yrange = c(-2.2, 1.0), mc.cores = numcores,
+                        range = r:min(r + 24, motif_no), run_set = c)
+      gc()   # garbage collector
+    }
+  }
+
+  # merge the footprint tables of all batches (without header line)
+  setwd(bg_dir)
+  merge_output_leslie <- paste0("find . -type f -name '",
+                                set1, "_", set2, "_On_pooled_", set1, "_", set2,
+                                "_hotspot_footprint_depth_table.csv' -exec tail -n +2 -q {} ';'",
+                                " > ", set1, "_", set2, "_On_pooled_",
+                                set1, "_", set2, "_hotspot_footprint_depth_table_leslie_merged.csv")
+  system(merge_output_leslie)
+
+  # read the merged table and add the header
+  dat_leslie <- read.table(paste0(bg_dir, set1, "_", set2, "_On_pooled_", set1, "_", set2,
+                                  "_hotspot_footprint_depth_table_leslie_merged.csv"),
+                           quote = "\"", comment.char = "")
+  colnames(dat_leslie) <- c("num", "filename", "center", "logo", "motiflength", "motif", "memeNo", "memeEntry",
+                            "lrmotif", "lrflanking", "lrtotal", "fdepth1", "fdepth2", "meancc1", "meancc2", "numsite")
+
+  # bagplot + D2 barplot + FDR barplot + CSV table with all values
+  # NOTE: dataname1 = treatment, dataname2 = control (we plot treatment vs control)
+  test_gen <- gen_bagplot_bagfoot2(
+    dat_leslie,
+    dataname1               = set2,   # treatment -> "increase" panel
+    dataname2               = set1,   # control   -> "decrease" panel
+    qvaluethreshold_bagplot = 0.05,
+    factor                  = 1.5,
+    include_homer_results   = use_homer_results,   # TRUE only if HOMER results exist
+    homer_results_file      = homer_results_file,
+    pval_threshold_homer    = 0.05
+  )
+}
+```
+
+```{r}
+# session info for reproducibility
+sessionInfo()
+```
