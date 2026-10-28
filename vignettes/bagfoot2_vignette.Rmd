@@ -21,26 +21,6 @@ BAGFOOT2 is a computational tool that predicts which transcription factors (TFs)
 
 Code: https://github.com/goldsteinlab-tech/BAGFOOT2
 
-## What is new in BAGFOOT2
-
-```{r, echo=FALSE}
-knitr::kable(
-  data.frame(
-    Feature = c("Motif database", "Statistics", "Main output",
-                "Interface", "Motif files", "HOMER replicates"),
-    BaGFoot = c("Individual motifs", "Bagplot (classical depth)", "Bagplot",
-                "R functions", "Manual download", "Same number per condition"),
-    BAGFOOT2 = c("Archetype motif clusters (mm10: 577, hg38: 636)",
-                 "Robust Mahalanobis distance (MCD) + finite-sample F cutoff + FDR",
-                 "Bagplot + D2 barplot + FDR barplot + full result table (CSV)",
-                 "Command line (`bagfoot2`) or R",
-                 "Downloaded automatically from Zenodo",
-                 "Unequal replicate numbers allowed")
-  ),
-  align = "lll"
-)
-```
-
 ## Introduction
 
 ### Input data
