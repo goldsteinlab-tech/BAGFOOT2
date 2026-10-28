@@ -1,14 +1,15 @@
 ---
-title: "BAGFOOT2: differential transcription factor footprinting from ATAC-seq"
+title: "BAGFOOT2"
 author: "Leslie Cohen"
 output:
   rmarkdown::html_vignette:
     css: style.css
 vignette: >
-  %\VignetteIndexEntry{BAGFOOT2: differential transcription factor footprinting from ATAC-seq}
+  %\VignetteIndexEntry{BAGFOOT2}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -17,496 +18,770 @@ knitr::opts_chunk$set(
 )
 ```
 
-BAGFOOT2 is a computational tool that predicts which transcription factors (TFs) change their activity between two experimental conditions using ATAC-seq data. It is an updated implementation of BaGFoot (Baek et al., *Cell Reports*, 2017), with motif clusters (archetypes) instead of individual motifs, robust statistics, and a one-line command-line interface. BAGFOOT2 is intended for biologists and bioinformaticians interested in chromatin accessibility and transcriptional regulation.
-
-Code: https://github.com/goldsteinlab-tech/BAGFOOT2
+BAGFOOT2 is a computational tool designed to predict which transcription factors (TFs) change their activity between two experimental conditions using ATAC-seq data. BAGFOOT2 is intended for biologists and bioinformaticians interested in chromatin accessibility and transcriptional regulation.
 
 ## Introduction
 
-### Input data
+## Input data:
 
-- BAM files (aligned ATAC-seq reads), one merged BAM per condition
-- MACS2 peak files (narrowPeak or BED), one per condition
-- Optional (HOMER): one BAM per replicate
+- BAM files (aligned ATAC-seq reads)
 
-### Core methodological components
+- MACS2 output peak files (in BED or narrowPeak format)
 
-BAGFOOT2 integrates footprinting, flanking accessibility, robust outlier statistics and (optionally) motif enrichment to infer TF activity changes between two conditions.
+## Core Methodological Components:
 
-**Footprinting and accessibility quantification.**
-For every archetype motif, BAGFOOT2 computes the Tn5 sequence-bias-corrected footprint depth (FPD) and the flanking accessibility (FA) over all motif occurrences in peaks, in each condition, and their differences (ΔFPD, ΔFA).
+BAGFOOT2 integrates differential accessibility, motif enrichment, and footprinting analysis to infer transcription factor activity changes between two conditions.
 
-**Robust differential activity score.**
-Each motif is a point in the (ΔFA, ΔFPD) plane. BAGFOOT2 scores how far each motif lies from the bulk of motifs with a robust Mahalanobis distance (D2; Minimum Covariance Determinant estimator), and gives each motif a p-value and a Benjamini–Hochberg FDR. A motif is reported as changed in the barplots if its FDR is below the threshold and it lies outside the bagplot fence.
+Differential accessible regions and motif enrichment:
+BAGFOOT2 identifies differentially accessible peaks using HOMER and performs motif enrichment analysis on these regions. Enriched motifs are incorporated into the result files.
 
-**Motif enrichment (optional).**
-BAGFOOT2 can identify differentially accessible peaks with HOMER (DESeq2) and run motif enrichment on them with the same archetype motifs. Enriched motifs are flagged in the results.
+Footprinting and accessibility quantification.
+BAGFOOT2 calculates flanking accessibility and transcription factor footprinting metrics from ATAC-seq BAM files, comparing them between the two conditions to detect differential TF activity.
 
-**Visualization.**
-BAGFOOT2 produces a bagplot of all motifs in the (ΔFA, ΔFPD) plane, and two ranked barplots of the significant motifs (by D2 and by −log10 FDR), split into TFs with increased and decreased activity in the treatment, with HOMER-enriched motifs labelled "ME". All values are written to a CSV table.
+Differential activity scores and visualization
+Differential scores quantify the change in TF activity between conditions. Results are compiled into a summary table including differential activity values, and statistical significance.
+BAGFOOT2 also provides a bagplot visualization summarizing differential footprint depth and flanking accessibility, and barplots of the TFs with significant changes, where HOMER-enriched motifs are highlighted.
+
+
+## How Does BAGFOOT2 Work?
+
+## Data Processing Steps:
+
+Reads BAM files and identifies accessible chromatin regions using MACS2 peak files.
+
+Calculates chromatin accessibility and TF footprints for each condition.
+
+Computes the difference (delta) in accessibility and footprinting for each TF motif between the two conditions.
+
+Performs HOMER motif enrichment analysis on differentially-accessible regions.
+
+## Output Generation:
+
+Produces a results table with TF scores, p-values, and other relevant statistics.
+
+Generates a bagplot for visualizing the distribution and outliers among TF activity changes, and barplots of the TFs with significant changes.
 
 ## Installation
 
-BAGFOOT2 is distributed through conda:
+BAGFOOT2 is distributed through conda. The conda package provides both the `bagfoot2` command and the BAGFOOT2 R library used in this vignette:
 
 ```{bash, eval=FALSE}
 conda create -n bagfoot2 -c goldsteinlab-tech -c conda-forge -c bioconda bagfoot2
 conda activate bagfoot2
 ```
 
-**System requirements:** Linux (or Windows with WSL2), about **16 GB of RAM per core** (`--cores`; use `--cores 1` on a machine with 16–24 GB) and 20–50 GB of free disk space for the output folder.
-
-`samtools` must be available in the environment, as well as the BSgenome package of your genome (e.g. `BSgenome.Mmusculus.UCSC.mm10`, `BSgenome.Hsapiens.UCSC.hg38`). HOMER is optional (see below).
-
-## Project structure
-
-### 1. Merged BAM directory (`--bam_dir`)
-
-One merged, sorted and indexed BAM per condition, named `<condition><bam_suffix>` (default suffix `_merged.bam`), e.g. `fed_merged.bam`, `fasted_merged.bam`, each with its `.bai` index.
-
-Each merged BAM also needs a tab-separated SAMtools idxstats file named `<BAM file>.csv`, used to count reads:
-
-```{bash, eval=FALSE}
-samtools idxstats fed_merged.bam > fed_merged.bam.csv
-```
-
-PCR duplicates must be removed beforehand (e.g. Picard MarkDuplicates).
-
-Chromosome names must be `chr`-prefixed (`chr1`, `chr2`, …).
-
-### 2. Peak directory (`--peak_dir`)
-
-One MACS2 peak file per condition, named `<condition><peak_suffix>` (default `_peaks.narrowPeak`), e.g. `fed_peaks.narrowPeak`.
-
-### 3. Replicate BAMs (only if `--homer TRUE`)
-
-In the same `--bam_dir`, one sorted and indexed BAM per replicate, named `<condition>_<index>.bam`:
-
-```
-fed_1.bam  fed_2.bam  fed_3.bam
-fasted_1.bam  fasted_2.bam
-```
-
-Replicate numbers can differ between conditions (`--reps_control 1,2,3 --reps_treatment 1,2`).
-
-### 4. Motif files (`--mm_files_dir`, optional)
-
-Archetype motif occurrences (FIMO genome-wide scan) and motif lists. If `--mm_files_dir` is not given, the mm10 or hg38 files are downloaded automatically from Zenodo (https://zenodo.org/records/20782782; ~6.4 GB for mm10, ~7.1 GB for hg38) and cached. On a shared server, set the environment variable `BAGFOOT2_MOTIF_DB_DIR` to a folder that already contains the files to avoid downloading them again.
-
-Expected content:
-
-- `motiflist_<genome>_cluster.txt`
-- `<genome>_cluster_fimo/`
-- `all_cluster_motifs.motifs` (for HOMER)
+**System requirements:** Linux (or Windows with WSL2), about **16 GB of RAM per core** and 20–50 GB of free disk space for the output folder.
 
 ## Quick start (command line)
 
+The `bagfoot2` command runs all the steps described in this vignette with one command line, and produces the final figures and result table:
+
 ```{bash, eval=FALSE}
 bagfoot2 \
   --bam_dir    /path/project/bam_merged \
   --peak_dir   /path/project/macs2 \
-  --output_dir /path/project/bagfoot2_fed_fasted \
+  --output_dir /path/project/bg_files_fed_fasted \
   --control    fed \
   --treatment  fasted \
   --genome     mm10 \
-  --cores      4
+  --bam_suffix ".sorted.bam" \
+  --cores      2
 ```
 
-With HOMER (3 control vs 2 treatment replicates):
+To include HOMER, add `--homer TRUE --homer_bin /path/homer/bin --reps_control 1,2,3 --reps_treatment 1,2,3`. Run `bagfoot2 --help` for the full list of options.
 
-```{bash, eval=FALSE}
-bagfoot2 \
-  --bam_dir    /path/project/bam_merged \
-  --peak_dir   /path/project/macs2 \
-  --output_dir /path/project/bagfoot2_fed_fasted \
-  --control fed --treatment fasted --genome mm10 --cores 4 \
-  --homer TRUE \
-  --homer_bin /path/homer/bin \
-  --reps_control 1,2,3 \
-  --reps_treatment 1,2
-```
+The motif database (mm10 or hg38) is downloaded automatically from Zenodo (https://doi.org/10.5281/zenodo.20782782) on first use.
 
-⚠️ The **control** is always given with `--control` and the **treatment** with `--treatment`. Positive ΔFA / ΔFPD means higher activity in the treatment.
+The rest of this vignette describes each step and runs it in R.
 
-### Main options
+## BAGFOOT2 Project Environment: Requirements and Structure
+Before running BAGFOOT2, you must organize your project files in a specific way to ensure smooth operation and reproducibility. Here’s a detailed guide on setting up your environment.
 
-```{r, echo=FALSE}
-knitr::kable(
-  data.frame(
-    Option = c("--bam_dir", "--peak_dir", "--output_dir", "--mm_files_dir",
-               "--control / --treatment", "--genome",
-               "--bam_suffix", "--peak_suffix", "--cores",
-               "--maha_barplot", "--maha_mode", "--maha_top_n", "--maha_qvalue",
-               "--homer", "--homer_bin", "--reps_control / --reps_treatment",
-               "--peak_padj_cutoff", "--peak_l2fc_cutoff"),
-    Default = c("", "", "", "auto (Zenodo)",
-                "", "mm10",
-                "_merged.bam", "_peaks.narrowPeak", "2",
-                "TRUE", "both", "20", "0.05",
-                "FALSE", "", "1",
-                "0.05", "0.5"),
-    Description = c("Merged BAMs (+ replicate BAMs for HOMER)",
-                    "MACS2 peak files",
-                    "Output directory (created if needed)",
-                    "Motif files directory",
-                    "Condition names (file prefixes)",
-                    "mm10 or hg38 (motif files provided); other genomes need your own motif files (--mm_files_dir)",
-                    "Suffix of merged BAM files",
-                    "Suffix of peak files",
-                    "Number of CPU cores",
-                    "Generate the Mahalanobis barplots",
-                    "'D2' (bar = D2, fill = FDR), 'padj' (bar = −log10 FDR, fill = D2) or 'both'",
-                    "Max bars per panel",
-                    "FDR threshold",
-                    "Run HOMER differential peaks + motif enrichment",
-                    "HOMER bin directory (required with --homer TRUE)",
-                    "Replicate indices, e.g. 1,2,3",
-                    "FDR threshold for differential peaks",
-                    "|log2FC| threshold for differential peaks")
-  ),
-  align = "lcl"
-)
-```
+## 1. Required Directories
+You need to prepare two main directories for each project:
 
-Run `bagfoot2 --help` for the full list.
+### a. Merged BAM Directory
+Contains one merged, sorted and indexed BAM file containing all replicas per condition (e.g., treated, control).
 
-Interrupted runs can simply be relaunched with the same command: the pre-processing files (BedGraph, hexamer tables) and the completed motif batches are detected and skipped.
+Each BAM file should be accompanied by:
 
-## How does BAGFOOT2 work?
+Its index file (.bai)
 
-### Step 1 — Pre-processing (per condition)
+A SAMtools stats file (output from `samtools idxstats file.bam > file.bam.csv`), named exactly like the BAM file followed by the .csv extension (e.g. `fed.sorted.bam.csv`).
 
-#### ATAC-seq signal normalization
+PCR duplicates must be removed from the BAM files beforehand (e.g. Picard MarkDuplicates).
 
-**Observed vs. expected table.**
-From each BAM, BAGFOOT2 counts the observed frequency of each 6-mer at Tn5 insertion sites and compares it to the expected genome-wide 6-mer frequency, giving an observed/expected (O/E) ratio per 6-mer.
+### b. MACS2 Peaks Directory
+Contains the MACS2 output files for each condition.
 
-**Bias factor application.**
-The O/E ratios are used as bias-correction factors to derive the expected count per position; observed counts are normalized by these expected counts before footprinting.
+Files must be in BED or narrowPeak format.
 
-#### 1. Nucleotide code files
+Each file should represent the ATAC-seq peaks for a given condition.
 
-For each chromosome, nuccode files (`nuccode_<genome>_6mer_<chr>.dat`) encode the 6-mer at each genomic position. They are generated automatically in the output directory during the first run, and reused if the run is relaunched.
+## 2. Additional Requirements (for HOMER Integration)
+If you plan to use the HOMER function (highly recommended for advanced analyses):
 
-#### 2. BedGraph files
+You must also provide individual BAM files for each replicate within each condition.
 
-For each condition, a genome-wide cut-count BedGraph (`<condition>_AC_cutcount.bgr.gz`) is created from the merged BAM. Cut sites are placed at the 5′ end of each read, and fragments longer than 1 kb are excluded.
+These BAM files should:
 
-<!-- TODO(Leslie/Ido): makeCutCountBAMWithName() is called with its default atac = FALSE,
-so the BedGraph is NOT shifted for the Tn5 offset (only the hexamer table is, with atac = TRUE).
-Decide whether to add atac = TRUE (CLI, Rmd) and then describe the shift here. -->
+Be sorted and indexed.
 
-#### 3. Hexamer bias table
+Follow a consistent naming scheme:
+For example, if your merged BAM is control_suffix.bam, the replicates should be named control_1.bam, control_2.bam, etc.
 
-For each condition, BAGFOOT2 builds a hexamer table (`Hexamer_<condition>_<genome>_withoutMap.txt`). With `atac = TRUE`, cut sites are shifted to correct the Tn5 offset (+4 bp on the positive strand, −5 bp on the negative strand). For every 6-mer, it:
+## 3. Project Definition
+Each project is defined at the beginning of the script (Environment chunk below), specifying:
 
-- counts its genomic occurrences (`GenomicPositionCount`),
-- sums the observed Tn5 cuts at these positions (`ObCuts`).
+Project name
+
+Path to merged BAM directory
+
+Path to MACS2 peaks directory
+
+Reference genome version (e.g., mm10, hg38)
+
+Treatments (all_set):
+List of all conditions (e.g., treated, control)
+
+Couples:
+Define the pairs of conditions you want to compare (for use in BAGFOOT2)
+
+## Important: How to Define "couples" in Your Project File
+In the couples section, always list the control condition first, followed by a hyphen (-), then the experimental condition (e.g., control-treated).
+
+Do NOT use underscores (_)!
+
+## Pre-processing Overview
+
+## Initial Processing and File Generation
+This section describes the preprocessing steps required for each condition before downstream analysis.
+
+## ATAC-seq signal normalization
+### Observed vs. Expected Table:
+Using the BAM files from ATAC-seq experiments, BAGFOOT2 calculates the observed frequency of each 6-mer at Tn5 insertion sites. It then compares these observed counts to the expected frequencies derived from a genome-wide 6-mer library, generating an observed/expected (O/E) ratio for each 6-mer.
+
+### Bias Factor Application:
+The O/E ratios serve as bias correction factors to derive expected count per position; observed counts are normalized by these expected counts. BAGFOOT2 applies these factors to adjust the raw ATAC-seq signal, normalizing for sequence bias before any downstream analysis (such as accessibility, footprinting, and delta calculation).
+
+
+### Conceptual Explanation with Annotated Example Code
+
+#### 1. Generate Nucleotide Code Files (Per Chromosome)
+
+For each chromosome in the reference genome (mm9, mm10, hg19, hg38), BAGFOOT2 generates nucleotide code files (nuccode files) that encode the hexamer (6-mer) sequence at each genomic position. These files serve as a lookup table, allowing the pipeline to quickly identify the sequence context at any position during bias correction and footprinting analysis.
+
+This pre-processing step is performed once per genome and is reused across all samples and conditions, ensuring efficient and consistent sequence bias correction throughout the analysis.
+
+#### 2. Generate BedGraph Files
+
+Create a BedGraph file for each condition, representing the genome-wide accessibility profile (Tn5 cut counts).
+
+#### 3. Hexamer Table Construction
+
+For each condition, BAGFOOT2 builds a hexamer (6-mer) bias table that quantifies sequence-dependent Tn5 cutting preferences.
+
+During this step, BAGFOOT2 corrects for the Tn5 transposase offset by shifting the reads (+4 bp for the positive strand, -5 bp for the negative strand), which accurately centers the insertion sites (`atac = TRUE`).
+
+Using the nuccode files, BAGFOOT2 assigns to each genomic position the local hexamer sequence. The corresponding Tn5 cuts are counted at each position. For every hexamer, BAGFOOT2 then:
+
+- counts how many times it appears in the genome
+(GenomicPositionCount), and
+- aggregates the observed Tn5 cuts at all positions carrying this hexamer
+(ObCuts).
 
 The ratio
 
           ObCutRatio = ObCuts / GenomicPositionCount
 
-estimates the cleavage propensity of each 6-mer. The table also contains the genomic proportion of each 6-mer (`GPRatio`) and the derived correction factor used to remove Tn5 sequence bias.
+provides an estimate of the cleavage propensity for each hexamer.
 
-#### 4. Peak reformatting
+The hexamer bias table also includes additional normalization metrics, such as:
 
-MACS2 peaks are converted to a standardized table (`<condition>_peaks.csv`).
+- the genomic proportion of each hexamer among all 6-mers (GPRatio), and
+- a correction factor derived from these quantities.
 
-### Step 2 — Merging the two conditions
+This correction factor is used in downstream steps to rescale cut counts and remove intrinsic Tn5 sequence bias, ensuring that the resulting footprinting signal reflects true chromatin protection rather than enzymatic preference.
 
+One hexamer bias table is generated per condition. For differential footprinting between two conditions (a couple), BAGFOOT2 later merges the per-condition tables into a combined hexamer file (see summary table), so that both conditions are normalized using the same hexamer set and bias estimates.
+
+
+### Output files
 ```{r, echo=FALSE}
 knitr::kable(
   data.frame(
-    Step = c("Nuccode files",
-             "BedGraph",
-             "Hexamer table",
-             "Peak reformatting"),
+    Step = c("Preprocessing", "Hexamer", "Peaks"),
+    Output_File = c("BedGraph", "nuccode + Hexamer table", "peaks reformatted as CSV"),
+    Description = c("Genome-wide Accessibility profile", "hexamer genome index + hexamer bias / frequency table", "peaks in standardized CSV format")
+  )
+)
+```
+
+  When comparing two conditions (e.g., control vs treatment), BAGFOOT2 generates additional files that combine information from both samples. These “couple-level” outputs ensure that footprinting and accessibility differences are evaluated on a unified genomic reference.
+
+
+Summary Table:
+```{r, echo=FALSE}
+
+ knitr::kable(
+  data.frame(
+    Step = c(
+      "Generate nuccode files ** (once per genome)",
+      "Generate BedGraph",
+      "Build hexamer table (incl. Tn5 offset correction)",
+      "Peak reformatting"
+    ),
     `Output (per condition)` = c(
-      "nuccode_<genome>_6mer_<chr>.dat (shared by both conditions)",
-      "<condition>_AC_cutcount.bgr.gz",
-      "Hexamer_<condition>_<genome>_withoutMap.txt",
-      "<condition>_peaks.csv"),
-    `Output (control–treatment pair)` = c(
+      "Nuccode* files (nuccode_<genome>_6mer_<chr>.dat, hexamer index in the genome, shared by all conditions)",
+      "BedGraph file (<condition>_AC_cutcount.bgr.gz)",
+      "Hexamer bias file (Hexamer_<condition>_<genome>_withoutMap.txt)",
+      "Hotspot table (MACS2 peaks reformatted to BAGFOOT2 format; one row per peak with placeholder footprint metrics)"
+    ),
+    `Output (per Couple)` = c(
       "",
       "",
-      "Hexamer_<control>_<treatment>_merged_withoutMap.csv",
-      "pooled_<control>_<treatment>_hotspot.csv (common peak universe)"),
+      "Combined hexamer (Hexamer_<control>_<treatment>_merged_withoutMap.csv)",
+      "Combined peaks / pooled hotspot (pooled_<control>_<treatment>_hotspot.csv, merged hotspot table defining a common peaks universe for both conditions)"
+    ),
     check.names = FALSE
   ),
-  align = "lll",
-  caption = "Pre-processing outputs"
+  align = "lcc",
+  caption = "Summary Table"
 )
+
+
 ```
 
-Both conditions are therefore normalized with the same hexamer bias estimates and analysed on the same set of peaks.
 
-### Step 3 — HOMER: differential peaks and motif enrichment (optional)
+## Example Script Illustrating the Workflow
 
-HOMER must be installed following the official instructions (http://homer.ucsd.edu/homer/introduction/install.html), with the genome installed (`perl configureHomer.pl -install mm10`).
+Your script should be in the directory bg_dir.
 
-With `--homer TRUE`, BAGFOOT2:
-
-- creates a HOMER tag directory per replicate (`TD_<condition>_<index>`),
-- counts tags per pooled peak (`annotatePeaks.pl`),
-- runs the differential analysis with DESeq2 (`getDiffExpression.pl`),
-- keeps differential peaks (`--peak_padj_cutoff`, `--peak_l2fc_cutoff`),
-- runs motif enrichment on them (`findMotifsGenome.pl`) with the archetype motifs (`all_cluster_motifs.motifs`).
-
-If no differential peak passes the thresholds, BAGFOOT2 prints a warning and continues without HOMER. If `homer_motif_res/knownResults.txt` already exists, HOMER is skipped.
-
-### Step 4 — Footprinting
-
-For each condition, a `CutCount` object is created from the BedGraph. Footprinting is run with `GFoot()` on all archetype motif occurrences within the pooled peaks, using the merged hexamer table for bias correction (`GFootOption()`).
-
-Motifs are processed in **batches of 25** (output folders `OUTPUT_<control>-<treatment>_<first motif>`); finished batches are skipped when a run is relaunched.
-
-For each motif, BAGFOOT2 quantifies:
-
-- **footprint depth (FPD)**: depletion of Tn5 cuts over the motif core relative to its flanks (protection by the bound TF),
-- **flanking accessibility (FA)**: Tn5 cuts in the regions surrounding the motif.
-
-### Step 5 — Statistics and visualization
-
-All batch tables are merged into one table, with one row per motif, containing:
-
-- footprint depths in control and treatment (`fdepth1`, `fdepth2`),
-- mean cut counts (`meancc1`, `meancc2`),
-- log2 ratios of cuts, treatment vs control, at the motif, in the flanks and in the whole window (`lrmotif`, `lrflanking`, `lrtotal`),
-- the number of motif sites (`numsite`).
-
-BAGFOOT2 then:
-
-1. computes ΔFA (`lrtotal`, treatment vs control) and ΔFPD for each motif,
-2. draws the bagplot: motifs are classified as `bag`, `fence` or `outlier`,
-3. estimates the robust centre and covariance of the motif cloud with MCD and computes the robust Mahalanobis distance D2 of each motif,
-4. derives p-values from the finite-sample F approximation and adjusts them (FDR),
-5. classifies outlier motifs by direction: `increase` (higher activity in the treatment), `decrease` (higher in the control) or `discordant` (ΔFA and ΔFPD of opposite signs),
-6. flags HOMER-enriched motifs (if HOMER was run),
-7. draws the D2 and FDR barplots of the significant (FDR < 0.05) `increase` and `decrease` motifs, and writes the result table.
-
-## Output files
-
-All result files share the prefix `bagfoot2_cutcount_diff_total_footprinting_depth_<control>_<treatment>`.
-
-```{r, echo=FALSE}
-knitr::kable(
-  data.frame(
-    File = c("<prefix>_bfoot2.pdf, <prefix>_bfoot2_zoomIn.pdf",
-             "<prefix>_maha_D2.pdf / .tiff",
-             "<prefix>_maha_padj.pdf / .tiff",
-             "<prefix>_bagfoot2_output.csv",
-             "*_hotspot_footprint_depth_table_merged.csv",
-             "OUTPUT_<control>-<treatment>_<n>/",
-             "homer_motif_res/knownResults.txt"),
-    Content = c("Bagplot of all motifs; significant motifs as filled squares, HOMER-enriched motifs circled in gold",
-                "D2 barplot: top significant TFs ranked by D2 (fill = FDR), increase and decrease panels",
-                "FDR barplot: top significant TFs ranked by −log10 FDR (fill = D2), increase and decrease panels",
-                "Result table with all values per motif (see below)",
-                "Raw footprinting statistics for all motifs",
-                "Per-batch footprint profiles and tables",
-                "HOMER motif enrichment (optional)")
-  ),
-  align = "ll"
-)
-```
-
-### Result table columns
-
-```{r, echo=FALSE}
-knitr::kable(
-  data.frame(
-    Column = c("motif_name", "archetype_name", "tf_name, family_name, motif_id, source_id, motif_type, PMID",
-               "delta_FA", "delta_FPD", "category",
-               "mahalanobis_distance_D2", "D2_pvalue", "D2_qvalue", "D2_significant",
-               "direction", "Homer_significant",
-               "halfspace_depth", "euclidean_distance"),
-    Description = c("Display name of the motif cluster",
-                    "Archetype motif cluster code (e.g. AC0001)",
-                    "Annotation of the motif cluster",
-                    "Change in flanking accessibility (treatment vs control)",
-                    "Change in footprint depth (treatment vs control)",
-                    "Bagplot position: bag, fence or outlier",
-                    "Robust Mahalanobis distance (MCD)",
-                    "P-value",
-                    "FDR-adjusted p-value (Benjamini–Hochberg)",
-                    "TRUE if D2_qvalue < 0.05",
-                    "increase, decrease, discordant or non_outlier",
-                    "TRUE if enriched in HOMER (only when HOMER was run)",
-                    "Bagplot halfspace depth",
-                    "Euclidean distance to the mean")
-  ),
-  align = "ll"
-)
-```
-
-## Running BAGFOOT2 step by step in R
-
-The command-line tool runs the code below. Running it in R is useful to inspect intermediate objects.
-
-A ready-to-use R Markdown version of this workflow, where you only edit the lines marked `# <-- EDIT`, is available on GitHub: [inst/scripts/bagfoot2_step_by_step.Rmd](https://github.com/goldsteinlab-tech/BAGFOOT2/blob/main/inst/scripts/bagfoot2_step_by_step.Rmd). After installing the package, it is also found with `system.file("scripts", "bagfoot2_step_by_step.Rmd", package = "bagfoot2")`.
+A ready-to-use R Markdown version of this script is installed with the package: `system.file("scripts", "bagfoot2_step_by_step.Rmd", package = "bagfoot2")`. Only the lines marked `# <-- EDIT` need to be changed.
 
 ```{r, eval=FALSE}
 library(bagfoot2)
+library(stringr)
+library(dplyr)
+```
 
-numcores <- 4
 
-bg_dir   <- "/path/project/bagfoot2_fed_fasted/"   # output directory
-bam_dir  <- "/path/project/bam_merged/"
-peak_dir <- "/path/project/macs2/"
-mm       <- "mm10"
-assign("mm", mm, envir = .GlobalEnv)
+```{r, eval=FALSE}
+# ==============================================================================
+# USER SETTINGS: edit the lines marked with  # <-- EDIT
+# ==============================================================================
 
-mm_files_dir <- ensure_motif_db(mm)   # or the path to your motif files
+numcores <- 2                                    # <-- EDIT: number of CPU cores to use
 
-set1 <- "fed"      # control
-set2 <- "fasted"   # treatment
+project <- "fed_fasted"                          # <-- EDIT: project name
+mm      <- "mm10"                                # <-- EDIT: genome version (mm10 or hg38)
 
-dir.create(bg_dir, showWarnings = FALSE, recursive = TRUE)
-setwd(bg_dir)
+# input and output folders (paths must end with "/")
+bg_dir    <- paste0("/path/to/bg_files_", project, "/")   # <-- EDIT: output directory
+macs2_dir <- paste0("/path/to/", project, "/macs2/")      # <-- EDIT: MACS2 peak files
+bam_dir   <- paste0("/path/to/", project, "/bam_merged/") # <-- EDIT: merged (and replicate) BAM files
 
-# ---- Step 1: per condition ---------------------------------------------------
-for (treat in c(set1, set2)) {
-  bamfile <- file.path(bam_dir, paste0(treat, "_merged.bam"))
+mm_files_dir <- "/path/to/mm10_files/"     # <-- EDIT: motif files folder
+# or, to download the motif files automatically from Zenodo:
+# mm_files_dir <- ensure_motif_db(mm)
 
-  countReadsBAM(bamfile, mm)
-  makeCutCountBAMWithName(bamfile, name = treat, refgenome = mm)
+if (project == "fed_fasted") {
 
-  MakeBiasCorrectionTableBAM(
-    bamfile   = bamfile,
-    outfile   = paste0("Hexamer_", treat, "_", mm, "_withoutMap.txt"),
-    refgenome = mm,
-    np        = 6,
-    atac      = TRUE,
-    mapdir    = ""
-  )
+  # set1 is the control, set2 is the treatment
+  all_set <- c("fed", "fasted")                  # <-- EDIT: conditions (control first)
 
-  macs <- read.table(file.path(peak_dir, paste0(treat, "_peaks.narrowPeak")),
-                     sep = "\t", header = FALSE)
-  nr <- nrow(macs)
-  hotspot <- data.frame(ID = 1:nr, chrom. = macs$V1, start = macs$V2 + 1, end = macs$V3,
-                        MaxD = 0, AveD = 0, Zscore = 0, pvalue = 0)
-  write.table(hotspot, paste0(treat, "_peaks.csv"), sep = ",", row.names = FALSE)
+  #⚠️ in couples: CONTROL first, then a hyphen (-, not an underscore), then the TREATMENT
+  couples <- c("fed-fasted")                     # <-- EDIT: control-treatment
 }
 
-# ---- Step 2: merge the pair --------------------------------------------------
-combineTwoHotspots(paste0(set1, "_peaks.csv"), paste0(set2, "_peaks.csv"), set1, set2)
+# ==============================================================================
+# END OF USER SETTINGS (no change needed below)
+# ==============================================================================
 
-merge_two_frequency_tables(
-  paste0("Hexamer_", set1, "_", mm, "_withoutMap.txt"),
-  paste0("Hexamer_", set2, "_", mm, "_withoutMap.txt"),
-  paste0("Hexamer_", set1, "_", set2, "_merged_withoutMap.csv")
-)
+assignInNamespace("MCCORES",       as.integer(numcores), ns = "bagfoot2")   # footprinting workers
+assignInNamespace("MCCORES_MOTIF", 1L,                   ns = "bagfoot2")   # motifs computed at the same time
+assignInNamespace("BFOOT_DEBUG",   FALSE,                ns = "bagfoot2")   # TRUE prints large debug matrices
 
-# ---- Step 3 (optional): HOMER -------------------------------------------------
-run_homer_step <- FALSE
-homer_results_file <- NULL
+# create the output directory if it does not exist yet
+dir.create(bg_dir, showWarnings = FALSE, recursive = TRUE)
 
-if (run_homer_step) {
-  homer_bin <- "/path/homer/bin"
-  reps_ctrl  <- 1:3   # fed_1.bam, fed_2.bam, fed_3.bam
-  reps_treat <- 1:2   # fasted_1.bam, fasted_2.bam
+knitr::opts_knit$set(root.dir = bg_dir)
+```
 
-  peaks_homer <- paste0("pooled_", set1, "_", set2, "_hotspot_modify.txt")
-  process_hotspot_file(paste0("pooled_", set1, "_", set2, "_hotspot.csv"), peaks_homer)
+For each condition:
 
-  # one HOMER tag directory per replicate
-  td_dirs <- c()
-  for (cond in c(set1, set2)) {
-    reps <- if (cond == set1) reps_ctrl else reps_treat
-    for (i in reps) {
-      td <- file.path(bam_dir, paste0("TD_", cond, "_", i))
-      if (!dir.exists(td)) {
-        system(paste(file.path(homer_bin, "makeTagDirectory"), td,
-                     file.path(bam_dir, paste0(cond, "_", i, ".bam")), "-format sam"))
+- A BedGraph file is created.
+
+- A hexamer table is generated (with Tn5 offset correction).
+
+
+This step will produce:
+
+A) Per treatment/condition (one set per sample):
+
+- BedGraph: Genome-wide accessibility profile file.
+
+- Hexamer file and the corresponding nuccode* files.
+
+- Peak file reformatted to a standardized CSV table.
+
+
+B) Pair of conditions (couple):
+
+- Combined peaks: Merged peak regions defining a shared peak universe for both conditions.
+
+- Combined hexamer: Merged hexamer bias tables used for comparative analysis between conditions.
+
+
+```{r, eval=FALSE}
+setwd(bg_dir)
+
+for (treat in all_set) {
+  bamfile <- paste0(bam_dir, treat, ".sorted.bam")
+
+  # count the number of cuts in the BAM file
+  cc <- countReadsBAM(bamfile, mm)
+  print(paste("treat:", treat, "cc:", cc))
+  assign(paste0("cc_", treat), cc)
+
+  # The two steps below are the longest of the pre-processing.
+  # If their output files already exist (e.g. when the script is run again),
+  # they are skipped. To recompute them, delete these files first.
+  bedgraph_file <- paste0(bg_dir, treat, "_AC_cutcount.bgr.gz")
+  hexamer_file  <- paste0(bg_dir, "Hexamer_", treat, "_", mm, "_withoutMap.txt")
+
+  # generate the BedGraph file of cut counts
+  if (!file.exists(bedgraph_file)) {
+    cutcountfile <- makeCutCountBAMWithName(bamfile,
+                                            name      = basenameWithoutExt(bamfile),
+                                            refgenome = mm)
+  } else {
+    message("BedGraph already exists for ", treat, ": skipped")
+  }
+
+  # hexamer bias frequency table (without mappability)
+  if (!file.exists(hexamer_file)) {
+    MakeBiasCorrectionTableBAM(bamfile   = bamfile,
+                               outfile   = paste0("Hexamer_", treat, "_", mm, "_withoutMap.txt"),
+                               refgenome = mm,
+                               np        = 6,
+                               atac      = TRUE,   # Set TRUE for ATAC data. The default value is FALSE
+                               mapdir    = "")     # empty: mappability is not used
+  } else {
+    message("Hexamer table already exists for ", treat, ": skipped")
+  }
+
+  # convert MACS2 peaks to CSV
+  macs <- read.csv(paste0(macs2_dir, treat, "_peaks.narrowPeak"),
+                   sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+  names(macs)[1:3] <- c("chr", "st", "ed")
+  nr <- nrow(macs)
+
+  hotspot <- data.frame(ID = 1:nr, chrom. = macs$chr, start = macs$st + 1, end = macs$ed,
+                        MaxD   = rep(0, nr),
+                        AveD   = rep(0, nr),
+                        Zscore = rep(0, nr),
+                        pvalue = rep(0, nr))
+
+  write.table(hotspot, file = paste0(bg_dir, treat, "_peaks.csv"), sep = ",", row.names = FALSE)
+}
+
+# remove temporary files
+temp <- list.files(bg_dir,
+                   pattern    = glob2rx("temp*.dat"),
+                   recursive  = TRUE,
+                   full.names = TRUE)
+file.remove(temp)
+
+# merge the files of each couple
+setwd(bg_dir)
+for (c in couples) {
+  print(c)
+  set1 <- str_split_fixed(c, "-", 2)[1]   # control
+  set2 <- str_split_fixed(c, "-", 2)[2]   # treatment
+
+  # combined peaks (common peak universe for both conditions)
+  assign(paste0(set1, "_", set2, "_peaks"), combineTwoHotspots(
+    paste0(bg_dir, set1, "_peaks.csv"),
+    paste0(bg_dir, set2, "_peaks.csv"),
+    set1, set2))
+
+  # remove the duplicated ID column if present
+  pooled <- read.csv(paste0(bg_dir, "pooled_", set1, "_", set2, "_hotspot.csv"))
+  if ("ID.1" %in% colnames(pooled)) {
+    pooled <- pooled %>%
+      dplyr::select(-ID.1)
+    write.csv(pooled, paste0(bg_dir, "pooled_", set1, "_", set2, "_hotspot.csv"), row.names = FALSE)
+  }
+
+  # combined hexamer table (same bias correction for both conditions)
+  assign(paste0("Hexamer_", set1, "_", set2), merge_two_frequency_tables(
+    paste0("Hexamer_", set1, "_", mm, "_withoutMap.txt"),
+    paste0("Hexamer_", set2, "_", mm, "_withoutMap.txt"),
+    paste0("Hexamer_", set1, "_", set2, "_merged_withoutMap.csv")))
+}
+```
+
+## HOMER Integration: Differential ATAC-seq and Motif Enrichment
+
+## Run HOMER
+
+To use this part of the workflow with BAGFOOT2, it is essential to have HOMER installed on your system, following the official recommendations provided on the HOMER installation page:
+
+http://homer.ucsd.edu/homer/introduction/install.html
+
+Please make sure to carefully follow the instructions on the official HOMER website to ensure a correct installation and full access to all required features.
+
+With BAGFOOT2, it is highly recommended to run HOMER to perform motif analysis on differentially accessible ATAC-seq peaks.
+
+Integrating HOMER allows you to identify transcription factor motifs that are enriched in regions showing differential accessibility between conditions.
+
+In this chunk, the workflow proceeds as follows:
+
+- Load the peak files and all BAM files for each replicate within every condition.
+
+- Use HOMER to count the number of tags per peak for each replicate.
+
+- Normalize these counts across replicates and conditions.
+
+- Perform differential analysis with DESeq2 via HOMER, generating an annotated file of differentially accessible peaks.
+
+- For these differential peaks, run motif enrichment analysis with HOMER.
+
+The results of the motif enrichment analysis are displayed as gold rings in BAGFOOT2's bagplot and labelled "ME" in the barplots. In addition, HOMER motif enrichment appears in the BAGFOOT2 output table.
+
+The number of replicates can differ between conditions (e.g. 3 and 2). If the HOMER results of a couple already exist (`homer_motif_res_<control>_<treatment>/knownResults.txt`), HOMER is skipped for this couple.
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, results='hide', eval=FALSE}
+setwd(bg_dir)
+
+# ==============================================================================
+# USER SETTINGS (HOMER): edit the lines marked with  # <-- EDIT
+# ==============================================================================
+
+use_homer <- TRUE                                    # <-- EDIT: FALSE to skip HOMER
+
+homer_bin <- "/path/to/homer/bin/"    # <-- EDIT: HOMER bin directory
+
+# replicate indices of each condition (the numbers can differ, e.g. 1:3 and 1:2)
+reps_control   <- 1:3   # <-- EDIT: fed_1.bam, fed_2.bam, fed_3.bam
+reps_treatment <- 1:3   # <-- EDIT: fasted_1.bam, fasted_2.bam, fasted_3.bam
+
+# thresholds to select the differential peaks
+padj_cutoff <- 0.05     # <-- EDIT (optional): adjusted p-value
+l2fc_cutoff <- 0.5      # <-- EDIT (optional): |log2 fold change|
+
+# ==============================================================================
+# END OF USER SETTINGS (no change needed below)
+# ==============================================================================
+
+# directory containing the replicate BAM files
+work_dir <- bam_dir
+
+if (use_homer) {
+  for (c in couples) {
+    set1 <- str_split_fixed(c, "-", 2)[1]   # control
+    set2 <- str_split_fixed(c, "-", 2)[2]   # treatment
+
+    output_folder <- paste0(bg_dir, "homer_motif_res_", set1, "_", set2)
+    if (file.exists(file.path(output_folder, "knownResults.txt"))) {
+      message("HOMER results already exist for ", c, ": skipped")
+      next
+    }
+
+    # output files
+    annotate_outfile <- file.path(bg_dir, paste0(set1, "_", set2, "_annot.txt"))    # annotatePeaks.pl
+    diffexp_outfile  <- file.path(bg_dir, paste0(set1, "_", set2, "_output.txt"))   # getDiffExpression.pl
+
+    # groups for getDiffExpression.pl: one label per replicate
+    group1 <- rep(set1, length(reps_control))     # control
+    group2 <- rep(set2, length(reps_treatment))   # treatment
+
+    # convert the merged peak file to the HOMER format
+    input_file1  <- file.path(bg_dir, paste0("pooled_", set1, "_", set2, "_hotspot.csv"))
+    output_file1 <- file.path(bg_dir, paste0("pooled_", set1, "_", set2, "_hotspot_modify.txt"))
+
+    process_hotspot_file(
+      input_file1,
+      output_file1
+    )
+
+    # 1. create one tag directory per replicate (in the BAM directory), only for this couple
+    #    can take more than 30 min
+    td_dirs <- c()
+    for (cond in c(set1, set2)) {
+      reps <- if (cond == set1) reps_control else reps_treatment
+      for (i in reps) {
+        bam_rep <- file.path(work_dir, paste0(cond, "_", i, ".bam"))
+        td_dir  <- file.path(work_dir, paste0("TD_", cond, "_", i))
+        if (!file.exists(bam_rep)) stop("Replicate BAM not found: ", bam_rep)
+        if (!dir.exists(td_dir)) {
+          system(paste(file.path(homer_bin, "makeTagDirectory"), td_dir, bam_rep, "-format sam"))
+        } else {
+          message("Tag directory already exists: ", basename(td_dir))
+        }
+        td_dirs <- c(td_dirs, td_dir)
       }
-      td_dirs <- c(td_dirs, td)
+    }
+
+    # 2. count tags per peak (annotatePeaks.pl)
+    run_annotate_peak(homer_bin, work_dir, output_file1, mm, td_dirs, annotate_outfile)
+
+    # 3. differential analysis (getDiffExpression.pl, DESeq2)
+    run_diff_expression(
+      homer_bin,
+      work_dir,
+      annotate_outfile,
+      diffexp_outfile,
+      group1,
+      group2
+    )
+
+    # 4. keep differential peaks only: BED file + table with log2FC, padj and p-value
+    setwd(bg_dir)   # important: the files are created in the working directory
+    diff_prefix <- paste0(set1, "_", set2, "_diff_peaks")
+    create_diff_peak_files(
+      input_path     = bg_dir,
+      input_filename = basename(diffexp_outfile),
+      sep            = "\t",
+      chr            = "Chr",
+      start          = "Start",
+      end            = "End",
+      padj_cutoff    = padj_cutoff,
+      l2fc_cutoff    = l2fc_cutoff,
+      output_prefix  = diff_prefix
+    )
+
+    # 5. motif enrichment on the differential peaks (findMotifsGenome.pl)
+    #    can take more than 30 min
+    input_bed   <- paste0(bg_dir, diff_prefix, "_simple.bed")
+    homer_exe   <- file.path(homer_bin, "findMotifsGenome.pl")
+    motif_file  <- system.file("data", "all_cluster_motifs.motifs", package = "bagfoot2")
+    extra_args1 <- paste("-mknown", motif_file, "-p", numcores)
+
+    run_homer(
+      input_bed,
+      output_folder,
+      mm,
+      homer_exe,
+      extra_args1
+    )
+  }
+}
+```
+
+## BAGFOOT2 Processing: Footprinting and TF Activity Inference
+
+In the final step, BAGFOOT2 integrates all precomputed inputs to quantify transcription factor (TF) activity differences between conditions. For each condition pair, BAGFOOT2 performs sequence-bias–corrected footprinting over all genomic motif occurrences and summarizes the results using a bagplot and barplots.
+
+### Input objects
+For each condition, a `CutCount` object is created from the ATAC-seq BedGraph file (`*_AC_cutcount.bgr.gz`).
+
+These objects store the Tn5 cut profiles and are used as the control and treatment signals in the footprinting & flanking accessibility analysis.
+
+In addition, BAGFOOT2 loads:
+
+- MotifDB : archetype motif occurrence coordinates derived from a FIMO genome-wide scan.
+These files (mm10_files.tar.gz, hg38_files.tar.gz) are available here: https://doi.org/10.5281/zenodo.20782782, and can be downloaded automatically with `ensure_motif_db()`.
+
+- Merged hexamer bias table (`Hexamer_set1_set2_merged_withoutMap.csv`): used for sequence-bias correction.
+
+- **Pooled hotspot file** (`pooled_set1_set2_hotspot.csv`): merged peak regions defining the common universe of sites where footprint are calculated.
+
+### Running BAGFOOT2 by motif batches
+For each couple of conditions (e.g., `fed` vs `fasted`), BAGFOOT2 constructs a `GFootOption` object specifying:
+
+- the merged hexamer bias file, and
+
+- the hexamer index pattern (`nuccode_{genome}_6mer_{chr}.dat`).
+
+The nuccode files are generated automatically during the pre-processing step (hexamer table construction).
+
+The main footprinting routine is performed with the `GFoot()` function:
+
+- `control` and `treatment` correspond to the two `CutCount` objects,
+
+- `sitefile` points to the pooled hotspot file (merged peaks),
+
+- `motifDB` provides genomic coordinates of archetype motif occurrences,
+
+- `gfootoption` controls bias correction and hexamer handling,
+
+- `outputdir` and `cachedir` store intermediate and final results.
+
+
+To make the computation efficient, motifs are processed in **batches of 25**.
+The script automatically detects any existing `*_footprint_depth_table.csv` files and resumes from the next motif index if a previous run was interrupted. This restart mechanism is driven by the `start_motif` variable.
+
+
+The `run()` function applies GFoot to all motifs in the specified range, using:
+
+
+- `mc.cores` to parallelize over CPU cores,
+
+- `graphout = TRUE` to generate footprint plots,
+
+- `yrange` to harmonize the y-axis scale across motifs.
+
+### Flanking and central accessibility
+For each motif occurrence, BAGFOOT2 quantifies:
+
+- central accessibility: Tn5 cuts over the motif core, where a footprint may appear, and
+
+- flanking accessibility: Tn5 cuts in the surrounding regions, providing a local background reference.
+
+These signals are integrated into three log2 ratios (treatment vs control):
+
+- lrmotif — accessibility change at the motif center,
+
+- lrflanking — accessibility change in the surrounding regions,
+
+- lrtotal — combined statistic (motif + flanks), used to assess TF activity shifts.
+
+This flanking-versus-center framework ensures that footprint depth reflects true binding-dependent protection rather than broader chromatin accessibility changes.
+
+### Merging footprint tables
+Each batch produces a separate `*_footprint_depth_table.csv` file.
+
+After all batches are completed, these files are concatenated into a single merged table:
+
+- `*_hotspot_footprint_depth_table_leslie_merged.csv`
+
+This table contains, for each motif:
+
+- footprint depths in control and treatment (`fdepth1`, `fdepth2`),
+
+- mean cut counts (`meancc1`, `meancc2`),
+
+- log2 ratios derived from central and flanking accessibility (`lrmotif`, `lrflanking`, `lrtotal`),
+
+- the number of motif sites used (`numsite`).
+
+### Visualization and integration with HOMER
+
+To summarize TF activity changes, BAGFOOT2 calls `gen_bagplot_bagfoot2()` function.
+This step:
+
+- generates a **bagplot**, where each point corresponds to a motif/TF,
+
+- highlights motifs with significant differential footprinting (based on q-values),
+
+- generates **barplots** of the TFs with significant changes (FDR below the threshold and outside the bagplot fence), one panel for increased and one for decreased activity in the treatment,
+
+- optionally annotates motifs using HOMER motif enrichment results based on archetype motifs (`knownResults.txt`), allowing the user to cross-reference footprint-based activity changes with motif enrichment p-values.
+
+The following files are generated, providing an overview of TFs that gain or lose activity between the two conditions:
+
+- the **bagplot** (`*_bfoot2.pdf` and `*_bfoot2_zoomIn.pdf`),
+
+- the **barplots** of the significant TFs, ranked by D2 (`*_maha_D2.pdf` / `.tiff`) and by FDR (`*_maha_padj.pdf` / `.tiff`),
+
+- the **CSV** result table with all values for each motif (`*_bagfoot2_output.csv`).
+
+Note: `dataname1` must be the treatment and `dataname2` the control, so that the "increase" panel corresponds to the treatment.
+
+Finally, `sessionInfo()` is printed to record the R environment and package versions used in the analysis, ensuring full reproducibility of the BAGFOOT2 run.
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, results='hide', fig.show='hide', eval=FALSE}
+setwd(bg_dir)
+
+# one CutCount object per condition, from its BedGraph file
+for (treat in all_set) {
+  assign(treat, CutCount(file  = paste0(bg_dir, treat, "_AC_cutcount.bgr.gz"),   # BedGraph file
+                         count = 1,                                               # placeholder
+                         name  = treat))                                          # data name
+}
+
+# motif database: archetype motif clusters (FIMO genome-wide scan)
+motifdb_mm <- MotifDB(
+  motiflistfile = paste0(mm_files_dir, "motiflist_", mm, "_cluster.txt"),   # list of motifs
+  directory     = paste0(mm_files_dir, mm, "_cluster_fimo"))               # directory of motif files
+motif_no <- switch(mm, "mm10" = 577, "hg38" = 636)   # total number of motifs, do not change
+
+for (c in couples) {
+  print(paste("c ----------------------->", c))
+  set1 <- str_split_fixed(c, "-", 2)[1]   # control
+  set2 <- str_split_fixed(c, "-", 2)[2]   # treatment
+
+  # HOMER results of this couple (used only if they exist)
+  homer_results_file <- paste0(bg_dir, "homer_motif_res_", set1, "_", set2, "/knownResults.txt")
+  use_homer_results  <- exists("use_homer") && use_homer && file.exists(homer_results_file)
+
+  gfootoption_couple <- GFootOption(biasfile        = paste0("Hexamer_", set1, "_", set2, "_merged_withoutMap.csv"),   # merged hexamer bias table
+                                    hexamer_pattern = paste0("nuccode_", mm, "_6mer_{chr}.dat"))                     # nucleotide code files
+  setwd(bg_dir)
+
+  # restart: find the batches already done
+  output_files <- list.files(bg_dir,
+                             pattern   = glob2rx(paste0(set1, "_", set2, "_On_pooled_", set1, "_", set2,
+                                                        "_hotspot_footprint_depth_table", ".csv")),
+                             recursive = TRUE)
+  if (length(output_files) == 0) {
+    start_motif <- 1
+  } else {
+    # starting motif = last batch done (from the folder name) + 25
+    start_motif <- dirname(output_files) %>%                  # directory name
+      str_split(., "\\_", simplify = TRUE) %>%                # split by underscore
+      as.data.frame(stringsAsFactors = FALSE) %>%
+      dplyr::select(tail(names(.), 1)) %>%                     # keep the last column
+      mutate_if(is.character, as.numeric) %>%                  # convert to numeric
+      max + 25                                                 # last batch + 25
+  }
+
+  # footprinting by batches of 25 motifs
+  if (start_motif < motif_no) {
+    for (r in seq(start_motif, motif_no, by = 25)) {
+      print(paste("r ---------------------->", r))
+      GFoot_obj <- GFoot(control     = get(set1),                                         # control data
+                         treatment   = get(set2),                                         # treatment data
+                         sitefile    = paste0("pooled_", set1, "_", set2, "_hotspot.csv"),   # combined peaks
+                         motifDB     = motifdb_mm,                                        # FIMO motifs
+                         gfootoption = gfootoption_couple,                                # bias and hexamer files
+                         outputdir   = paste0("OUTPUT_", c, "_", r),                      # output directory
+                         cachedir    = paste0("CACHE_", c, "_", r))                       # cache directory
+
+      res_couple <- run(GFoot_obj, graphout = TRUE, yrange = c(-2.2, 1.0), mc.cores = numcores,
+                        range = r:min(r + 24, motif_no), run_set = c)
+      gc()   # garbage collector
     }
   }
 
-  annot_out <- paste0(set1, "_", set2, "_annot.txt")
-  diff_out  <- paste0(set1, "_", set2, "_output.txt")
+  # merge the footprint tables of all batches (without header line)
+  setwd(bg_dir)
+  merge_output_leslie <- paste0("find . -type f -name '",
+                                set1, "_", set2, "_On_pooled_", set1, "_", set2,
+                                "_hotspot_footprint_depth_table.csv' -exec tail -n +2 -q {} ';'",
+                                " > ", set1, "_", set2, "_On_pooled_",
+                                set1, "_", set2, "_hotspot_footprint_depth_table_leslie_merged.csv")
+  system(merge_output_leslie)
 
-  run_annotate_peak(homer_bin, bam_dir, peaks_homer, mm, td_dirs, annot_out)
-  run_diff_expression(homer_bin, bam_dir, annot_out, diff_out,
-                      rep(set1, length(reps_ctrl)), rep(set2, length(reps_treat)))
+  # read the merged table and add the header
+  dat_leslie <- read.table(paste0(bg_dir, set1, "_", set2, "_On_pooled_", set1, "_", set2,
+                                  "_hotspot_footprint_depth_table_leslie_merged.csv"),
+                           quote = "\"", comment.char = "")
+  colnames(dat_leslie) <- c("num", "filename", "center", "logo", "motiflength", "motif", "memeNo", "memeEntry",
+                            "lrmotif", "lrflanking", "lrtotal", "fdepth1", "fdepth2", "meancc1", "meancc2", "numsite")
 
-  create_diff_peak_files(input_path = bg_dir, input_filename = diff_out, sep = "\t",
-                         chr = "Chr", start = "Start", end = "End",
-                         padj_cutoff = 0.05, l2fc_cutoff = 0.5,
-                         output_prefix = "my_peaks")
-
-  run_homer(file.path(bg_dir, "my_peaks_simple.bed"),
-            file.path(bg_dir, "homer_motif_res"), mm,
-            file.path(homer_bin, "findMotifsGenome.pl"),
-            paste("-mknown", file.path(mm_files_dir, "all_cluster_motifs.motifs"),
-                  "-p", numcores))
-
-  homer_results_file <- file.path(bg_dir, "homer_motif_res", "knownResults.txt")
-}
-
-# ---- Step 4: footprinting ----------------------------------------------------
-assign(set1, CutCount(file = paste0(set1, "_AC_cutcount.bgr.gz"), count = 1, name = set1))
-assign(set2, CutCount(file = paste0(set2, "_AC_cutcount.bgr.gz"), count = 1, name = set2))
-
-motifdb <- MotifDB(
-  motiflistfile = file.path(mm_files_dir, paste0("motiflist_", mm, "_cluster.txt")),
-  directory     = file.path(mm_files_dir, paste0(mm, "_cluster_fimo"))
-)
-
-gfootoption <- GFootOption(
-  biasfile        = file.path(bg_dir, paste0("Hexamer_", set1, "_", set2, "_merged_withoutMap.csv")),
-  hexamer_pattern = paste0("nuccode_", mm, "_6mer_{chr}.dat")
-)
-
-couple   <- paste0(set1, "-", set2)
-motif_no <- switch(mm, "mm10" = 577, "hg38" = 636)   # total number of motifs: do not change
-
-for (r in seq(1, motif_no, by = 25)) {
-  gf <- GFoot(
-    control     = get(set1),
-    treatment   = get(set2),
-    sitefile    = file.path(bg_dir, paste0("pooled_", set1, "_", set2, "_hotspot.csv")),
-    motifDB     = motifdb,
-    gfootoption = gfootoption,
-    outputdir   = paste0("OUTPUT_", couple, "_", r),
-    cachedir    = paste0("CACHE_", couple, "_", r)
+  # bagplot + barplots + CSV table with all values
+  # NOTE: dataname1 = treatment, dataname2 = control (we plot treatment vs control)
+  test_gen <- gen_bagplot_bagfoot2(
+    dat_leslie,
+    dataname1               = set2,   # treatment -> "increase" panel
+    dataname2               = set1,   # control   -> "decrease" panel
+    qvaluethreshold_bagplot = 0.05,
+    factor                  = 1.5,
+    include_homer_results   = use_homer_results,   # TRUE only if HOMER results exist
+    homer_results_file      = homer_results_file,
+    pval_threshold_homer    = 0.05
   )
-  run(gf, graphout = TRUE, yrange = c(-2.2, 1.0), mc.cores = numcores,
-      range = r:min(r + 24, motif_no), run_set = couple)
-  gc()
 }
-
-# ---- Step 5: statistics and plots --------------------------------------------
-merged_name <- paste0(set1, "_", set2, "_On_pooled_", set1, "_", set2,
-                      "_hotspot_footprint_depth_table_merged.csv")
-system(paste0("find . -type f -name '", set1, "_", set2, "_On_pooled_", set1, "_", set2,
-              "_hotspot_footprint_depth_table.csv' -exec tail -n +2 -q {} ';' > ", merged_name))
-
-dat <- data.table::fread(merged_name, header = FALSE, data.table = FALSE)
-colnames(dat) <- c("num", "filename", "center", "logo", "motiflength", "motif",
-                   "memeNo", "memeEntry", "lrmotif", "lrflanking", "lrtotal",
-                   "fdepth1", "fdepth2", "meancc1", "meancc2", "numsite")
-
-# Bagplot + D2 barplot + FDR barplot + CSV table with all values
-# NOTE: dataname1 = treatment, dataname2 = control
-gen_bagplot_bagfoot2(
-  dat,
-  dataname1             = set2,
-  dataname2             = set1,
-  include_homer_results = !is.null(homer_results_file),
-  homer_results_file    = homer_results_file
-)
 ```
 
-## Citation
 
-If you use BAGFOOT2, please cite the original BaGFoot method:
-
-Baek S, Goldstein I, Hager GL. Bivariate genomic footprinting detects changes in transcription factor activity. *Cell Reports* 2017;19(8):1710–1722.
-
-## Session info
-
-```{r, eval=TRUE}
+```{r,eval=TRUE}
+# Session info for reproducibility/debugging
 sessionInfo()
+
 ```

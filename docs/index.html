@@ -13,7 +13,7 @@
 <meta name="author" content="Leslie Cohen" />
 
 
-<title>BAGFOOT2: differential transcription factor footprinting from ATAC-seq</title>
+<title>BAGFOOT2</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -217,762 +217,913 @@ text-decoration: underline;
 
 
 
-<h1 class="title toc-ignore">BAGFOOT2: differential transcription factor
-footprinting from ATAC-seq</h1>
+<h1 class="title toc-ignore">BAGFOOT2</h1>
 <h4 class="author">Leslie Cohen</h4>
 
 
 
-<p>BAGFOOT2 is a computational tool that predicts which transcription
-factors (TFs) change their activity between two experimental conditions
-using ATAC-seq data. It is an updated implementation of BaGFoot (Baek et
-al., <em>Cell Reports</em>, 2017), with motif clusters (archetypes)
-instead of individual motifs, robust statistics, and a one-line
-command-line interface. BAGFOOT2 is intended for biologists and
-bioinformaticians interested in chromatin accessibility and
-transcriptional regulation.</p>
-<p>Code: <a href="https://github.com/goldsteinlab-tech/BAGFOOT2" class="uri">https://github.com/goldsteinlab-tech/BAGFOOT2</a></p>
+<p>BAGFOOT2 is a computational tool designed to predict which
+transcription factors (TFs) change their activity between two
+experimental conditions using ATAC-seq data. BAGFOOT2 is intended for
+biologists and bioinformaticians interested in chromatin accessibility
+and transcriptional regulation.</p>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
-<div id="input-data" class="section level3">
-<h3>Input data</h3>
+</div>
+<div id="input-data" class="section level2">
+<h2>Input data:</h2>
 <ul>
-<li>BAM files (aligned ATAC-seq reads), one merged BAM per
-condition</li>
-<li>MACS2 peak files (narrowPeak or BED), one per condition</li>
-<li>Optional (HOMER): one BAM per replicate</li>
+<li><p>BAM files (aligned ATAC-seq reads)</p></li>
+<li><p>MACS2 output peak files (in BED or narrowPeak format)</p></li>
 </ul>
 </div>
-<div id="core-methodological-components" class="section level3">
-<h3>Core methodological components</h3>
-<p>BAGFOOT2 integrates footprinting, flanking accessibility, robust
-outlier statistics and (optionally) motif enrichment to infer TF
-activity changes between two conditions.</p>
-<p><strong>Footprinting and accessibility quantification.</strong> For
-every archetype motif, BAGFOOT2 computes the Tn5 sequence-bias-corrected
-footprint depth (FPD) and the flanking accessibility (FA) over all motif
-occurrences in peaks, in each condition, and their differences (ΔFPD,
-ΔFA).</p>
-<p><strong>Robust differential activity score.</strong> Each motif is a
-point in the (ΔFA, ΔFPD) plane. BAGFOOT2 scores how far each motif lies
-from the bulk of motifs with a robust Mahalanobis distance (D2; Minimum
-Covariance Determinant estimator), and gives each motif a p-value and a
-Benjamini–Hochberg FDR. A motif is reported as changed in the barplots
-if its FDR is below the threshold and it lies outside the bagplot
-fence.</p>
-<p><strong>Motif enrichment (optional).</strong> BAGFOOT2 can identify
-differentially accessible peaks with HOMER (DESeq2) and run motif
-enrichment on them with the same archetype motifs. Enriched motifs are
-flagged in the results.</p>
-<p><strong>Visualization.</strong> BAGFOOT2 produces a bagplot of all
-motifs in the (ΔFA, ΔFPD) plane, and two ranked barplots of the
-significant motifs (by D2 and by −log10 FDR), split into TFs with
-increased and decreased activity in the treatment, with HOMER-enriched
-motifs labelled “ME”. All values are written to a CSV table.</p>
+<div id="core-methodological-components" class="section level2">
+<h2>Core Methodological Components:</h2>
+<p>BAGFOOT2 integrates differential accessibility, motif enrichment, and
+footprinting analysis to infer transcription factor activity changes
+between two conditions.</p>
+<p>Differential accessible regions and motif enrichment: BAGFOOT2
+identifies differentially accessible peaks using HOMER and performs
+motif enrichment analysis on these regions. Enriched motifs are
+incorporated into the result files.</p>
+<p>Footprinting and accessibility quantification. BAGFOOT2 calculates
+flanking accessibility and transcription factor footprinting metrics
+from ATAC-seq BAM files, comparing them between the two conditions to
+detect differential TF activity.</p>
+<p>Differential activity scores and visualization Differential scores
+quantify the change in TF activity between conditions. Results are
+compiled into a summary table including differential activity values,
+and statistical significance. BAGFOOT2 also provides a bagplot
+visualization summarizing differential footprint depth and flanking
+accessibility, and barplots of the TFs with significant changes, where
+HOMER-enriched motifs are highlighted.</p>
 </div>
+<div id="how-does-bagfoot2-work" class="section level2">
+<h2>How Does BAGFOOT2 Work?</h2>
+</div>
+<div id="data-processing-steps" class="section level2">
+<h2>Data Processing Steps:</h2>
+<p>Reads BAM files and identifies accessible chromatin regions using
+MACS2 peak files.</p>
+<p>Calculates chromatin accessibility and TF footprints for each
+condition.</p>
+<p>Computes the difference (delta) in accessibility and footprinting for
+each TF motif between the two conditions.</p>
+<p>Performs HOMER motif enrichment analysis on differentially-accessible
+regions.</p>
+</div>
+<div id="output-generation" class="section level2">
+<h2>Output Generation:</h2>
+<p>Produces a results table with TF scores, p-values, and other relevant
+statistics.</p>
+<p>Generates a bagplot for visualizing the distribution and outliers
+among TF activity changes, and barplots of the TFs with significant
+changes.</p>
 </div>
 <div id="installation" class="section level2">
 <h2>Installation</h2>
-<p>BAGFOOT2 is distributed through conda:</p>
+<p>BAGFOOT2 is distributed through conda. The conda package provides
+both the <code>bagfoot2</code> command and the BAGFOOT2 R library used
+in this vignette:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">conda</span> create <span class="at">-n</span> bagfoot2 <span class="at">-c</span> goldsteinlab-tech <span class="at">-c</span> conda-forge <span class="at">-c</span> bioconda bagfoot2</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">conda</span> activate bagfoot2</span></code></pre></div>
 <p><strong>System requirements:</strong> Linux (or Windows with WSL2),
-about <strong>16 GB of RAM per core</strong> (<code>--cores</code>; use
-<code>--cores 1</code> on a machine with 16–24 GB) and 20–50 GB of free
-disk space for the output folder.</p>
-<p><code>samtools</code> must be available in the environment, as well
-as the BSgenome package of your genome
-(e.g. <code>BSgenome.Mmusculus.UCSC.mm10</code>,
-<code>BSgenome.Hsapiens.UCSC.hg38</code>). HOMER is optional (see
-below).</p>
-</div>
-<div id="project-structure" class="section level2">
-<h2>Project structure</h2>
-<div id="merged-bam-directory---bam_dir" class="section level3">
-<h3>1. Merged BAM directory (<code>--bam_dir</code>)</h3>
-<p>One merged, sorted and indexed BAM per condition, named
-<code>&lt;condition&gt;&lt;bam_suffix&gt;</code> (default suffix
-<code>_merged.bam</code>), e.g. <code>fed_merged.bam</code>,
-<code>fasted_merged.bam</code>, each with its <code>.bai</code>
-index.</p>
-<p>Each merged BAM also needs a tab-separated SAMtools idxstats file
-named <code>&lt;BAM file&gt;.csv</code>, used to count reads:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">samtools</span> idxstats fed_merged.bam <span class="op">&gt;</span> fed_merged.bam.csv</span></code></pre></div>
-<p>PCR duplicates must be removed beforehand (e.g. Picard
-MarkDuplicates).</p>
-<p>Chromosome names must be <code>chr</code>-prefixed
-(<code>chr1</code>, <code>chr2</code>, …).</p>
-</div>
-<div id="peak-directory---peak_dir" class="section level3">
-<h3>2. Peak directory (<code>--peak_dir</code>)</h3>
-<p>One MACS2 peak file per condition, named
-<code>&lt;condition&gt;&lt;peak_suffix&gt;</code> (default
-<code>_peaks.narrowPeak</code>),
-e.g. <code>fed_peaks.narrowPeak</code>.</p>
-</div>
-<div id="replicate-bams-only-if---homer-true" class="section level3">
-<h3>3. Replicate BAMs (only if <code>--homer TRUE</code>)</h3>
-<p>In the same <code>--bam_dir</code>, one sorted and indexed BAM per
-replicate, named <code>&lt;condition&gt;_&lt;index&gt;.bam</code>:</p>
-<pre><code>fed_1.bam  fed_2.bam  fed_3.bam
-fasted_1.bam  fasted_2.bam</code></pre>
-<p>Replicate numbers can differ between conditions
-(<code>--reps_control 1,2,3 --reps_treatment 1,2</code>).</p>
-</div>
-<div id="motif-files---mm_files_dir-optional" class="section level3">
-<h3>4. Motif files (<code>--mm_files_dir</code>, optional)</h3>
-<p>Archetype motif occurrences (FIMO genome-wide scan) and motif lists.
-If <code>--mm_files_dir</code> is not given, the mm10 or hg38 files are
-downloaded automatically from Zenodo (<a href="https://zenodo.org/records/20782782" class="uri">https://zenodo.org/records/20782782</a>; ~6.4 GB for mm10,
-~7.1 GB for hg38) and cached. On a shared server, set the environment
-variable <code>BAGFOOT2_MOTIF_DB_DIR</code> to a folder that already
-contains the files to avoid downloading them again.</p>
-<p>Expected content:</p>
-<ul>
-<li><code>motiflist_&lt;genome&gt;_cluster.txt</code></li>
-<li><code>&lt;genome&gt;_cluster_fimo/</code></li>
-<li><code>all_cluster_motifs.motifs</code> (for HOMER)</li>
-</ul>
-</div>
+about <strong>16 GB of RAM per core</strong> and 20–50 GB of free disk
+space for the output folder.</p>
 </div>
 <div id="quick-start-command-line" class="section level2">
 <h2>Quick start (command line)</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">bagfoot2</span> <span class="dt">\</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">--bam_dir</span>    /path/project/bam_merged <span class="dt">\</span></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">--peak_dir</span>   /path/project/macs2 <span class="dt">\</span></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">--output_dir</span> /path/project/bagfoot2_fed_fasted <span class="dt">\</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">--control</span>    fed <span class="dt">\</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">--treatment</span>  fasted <span class="dt">\</span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">--genome</span>     mm10 <span class="dt">\</span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">--cores</span>      4</span></code></pre></div>
-<p>With HOMER (3 control vs 2 treatment replicates):</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="ex">bagfoot2</span> <span class="dt">\</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">--bam_dir</span>    /path/project/bam_merged <span class="dt">\</span></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">--peak_dir</span>   /path/project/macs2 <span class="dt">\</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">--output_dir</span> /path/project/bagfoot2_fed_fasted <span class="dt">\</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">--control</span> fed <span class="at">--treatment</span> fasted <span class="at">--genome</span> mm10 <span class="at">--cores</span> 4 <span class="dt">\</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">--homer</span> TRUE <span class="dt">\</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">--homer_bin</span> /path/homer/bin <span class="dt">\</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">--reps_control</span> 1,2,3 <span class="dt">\</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="at">--reps_treatment</span> 1,2</span></code></pre></div>
-<p>⚠️ The <strong>control</strong> is always given with
-<code>--control</code> and the <strong>treatment</strong> with
-<code>--treatment</code>. Positive ΔFA / ΔFPD means higher activity in
-the treatment.</p>
-<div id="main-options" class="section level3">
-<h3>Main options</h3>
-<table>
-<colgroup>
-<col width="23%" />
-<col width="12%" />
-<col width="63%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">Option</th>
-<th align="center">Default</th>
-<th align="left">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">–bam_dir</td>
-<td align="center"></td>
-<td align="left">Merged BAMs (+ replicate BAMs for HOMER)</td>
-</tr>
-<tr class="even">
-<td align="left">–peak_dir</td>
-<td align="center"></td>
-<td align="left">MACS2 peak files</td>
-</tr>
-<tr class="odd">
-<td align="left">–output_dir</td>
-<td align="center"></td>
-<td align="left">Output directory (created if needed)</td>
-</tr>
-<tr class="even">
-<td align="left">–mm_files_dir</td>
-<td align="center">auto (Zenodo)</td>
-<td align="left">Motif files directory</td>
-</tr>
-<tr class="odd">
-<td align="left">–control / –treatment</td>
-<td align="center"></td>
-<td align="left">Condition names (file prefixes)</td>
-</tr>
-<tr class="even">
-<td align="left">–genome</td>
-<td align="center">mm10</td>
-<td align="left">mm10 or hg38 (motif files provided); other genomes need
-your own motif files (–mm_files_dir)</td>
-</tr>
-<tr class="odd">
-<td align="left">–bam_suffix</td>
-<td align="center">_merged.bam</td>
-<td align="left">Suffix of merged BAM files</td>
-</tr>
-<tr class="even">
-<td align="left">–peak_suffix</td>
-<td align="center">_peaks.narrowPeak</td>
-<td align="left">Suffix of peak files</td>
-</tr>
-<tr class="odd">
-<td align="left">–cores</td>
-<td align="center">2</td>
-<td align="left">Number of CPU cores</td>
-</tr>
-<tr class="even">
-<td align="left">–maha_barplot</td>
-<td align="center">TRUE</td>
-<td align="left">Generate the Mahalanobis barplots</td>
-</tr>
-<tr class="odd">
-<td align="left">–maha_mode</td>
-<td align="center">both</td>
-<td align="left">‘D2’ (bar = D2, fill = FDR), ‘padj’ (bar = −log10 FDR,
-fill = D2) or ‘both’</td>
-</tr>
-<tr class="even">
-<td align="left">–maha_top_n</td>
-<td align="center">20</td>
-<td align="left">Max bars per panel</td>
-</tr>
-<tr class="odd">
-<td align="left">–maha_qvalue</td>
-<td align="center">0.05</td>
-<td align="left">FDR threshold</td>
-</tr>
-<tr class="even">
-<td align="left">–homer</td>
-<td align="center">FALSE</td>
-<td align="left">Run HOMER differential peaks + motif enrichment</td>
-</tr>
-<tr class="odd">
-<td align="left">–homer_bin</td>
-<td align="center"></td>
-<td align="left">HOMER bin directory (required with –homer TRUE)</td>
-</tr>
-<tr class="even">
-<td align="left">–reps_control / –reps_treatment</td>
-<td align="center">1</td>
-<td align="left">Replicate indices, e.g. 1,2,3</td>
-</tr>
-<tr class="odd">
-<td align="left">–peak_padj_cutoff</td>
-<td align="center">0.05</td>
-<td align="left">FDR threshold for differential peaks</td>
-</tr>
-<tr class="even">
-<td align="left">–peak_l2fc_cutoff</td>
-<td align="center">0.5</td>
-<td align="left">|log2FC| threshold for differential peaks</td>
-</tr>
-</tbody>
-</table>
-<p>Run <code>bagfoot2 --help</code> for the full list.</p>
-<p>Interrupted runs can simply be relaunched with the same command: the
-pre-processing files (BedGraph, hexamer tables) and the completed motif
-batches are detected and skipped.</p>
+<p>The <code>bagfoot2</code> command runs all the steps described in
+this vignette with one command line, and produces the final figures and
+result table:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">bagfoot2</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="at">--bam_dir</span>    /path/project/bam_merged <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="at">--peak_dir</span>   /path/project/macs2 <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">--output_dir</span> /path/project/bg_files_fed_fasted <span class="dt">\</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">--control</span>    fed <span class="dt">\</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">--treatment</span>  fasted <span class="dt">\</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">--genome</span>     mm10 <span class="dt">\</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="at">--bam_suffix</span> <span class="st">&quot;.sorted.bam&quot;</span> <span class="dt">\</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">--cores</span>      2</span></code></pre></div>
+<p>To include HOMER, add
+<code>--homer TRUE --homer_bin /path/homer/bin --reps_control 1,2,3 --reps_treatment 1,2,3</code>.
+Run <code>bagfoot2 --help</code> for the full list of options.</p>
+<p>The motif database (mm10 or hg38) is downloaded automatically from
+Zenodo (<a href="https://doi.org/10.5281/zenodo.20782782" class="uri">https://doi.org/10.5281/zenodo.20782782</a>) on first
+use.</p>
+<p>The rest of this vignette describes each step and runs it in R.</p>
+</div>
+<div id="bagfoot2-project-environment-requirements-and-structure" class="section level2">
+<h2>BAGFOOT2 Project Environment: Requirements and Structure</h2>
+<p>Before running BAGFOOT2, you must organize your project files in a
+specific way to ensure smooth operation and reproducibility. Here’s a
+detailed guide on setting up your environment.</p>
+</div>
+<div id="required-directories" class="section level2">
+<h2>1. Required Directories</h2>
+<p>You need to prepare two main directories for each project:</p>
+<div id="a.-merged-bam-directory" class="section level3">
+<h3>a. Merged BAM Directory</h3>
+<p>Contains one merged, sorted and indexed BAM file containing all
+replicas per condition (e.g., treated, control).</p>
+<p>Each BAM file should be accompanied by:</p>
+<p>Its index file (.bai)</p>
+<p>A SAMtools stats file (output from
+<code>samtools idxstats file.bam &gt; file.bam.csv</code>), named
+exactly like the BAM file followed by the .csv extension
+(e.g. <code>fed.sorted.bam.csv</code>).</p>
+<p>PCR duplicates must be removed from the BAM files beforehand
+(e.g. Picard MarkDuplicates).</p>
+</div>
+<div id="b.-macs2-peaks-directory" class="section level3">
+<h3>b. MACS2 Peaks Directory</h3>
+<p>Contains the MACS2 output files for each condition.</p>
+<p>Files must be in BED or narrowPeak format.</p>
+<p>Each file should represent the ATAC-seq peaks for a given
+condition.</p>
 </div>
 </div>
-<div id="how-does-bagfoot2-work" class="section level2">
-<h2>How does BAGFOOT2 work?</h2>
-<div id="step-1-pre-processing-per-condition" class="section level3">
-<h3>Step 1 — Pre-processing (per condition)</h3>
-<div id="atac-seq-signal-normalization" class="section level4">
-<h4>ATAC-seq signal normalization</h4>
-<p><strong>Observed vs. expected table.</strong> From each BAM, BAGFOOT2
-counts the observed frequency of each 6-mer at Tn5 insertion sites and
-compares it to the expected genome-wide 6-mer frequency, giving an
-observed/expected (O/E) ratio per 6-mer.</p>
-<p><strong>Bias factor application.</strong> The O/E ratios are used as
-bias-correction factors to derive the expected count per position;
-observed counts are normalized by these expected counts before
-footprinting.</p>
+<div id="additional-requirements-for-homer-integration" class="section level2">
+<h2>2. Additional Requirements (for HOMER Integration)</h2>
+<p>If you plan to use the HOMER function (highly recommended for
+advanced analyses):</p>
+<p>You must also provide individual BAM files for each replicate within
+each condition.</p>
+<p>These BAM files should:</p>
+<p>Be sorted and indexed.</p>
+<p>Follow a consistent naming scheme: For example, if your merged BAM is
+control_suffix.bam, the replicates should be named control_1.bam,
+control_2.bam, etc.</p>
 </div>
-<div id="nucleotide-code-files" class="section level4">
-<h4>1. Nucleotide code files</h4>
-<p>For each chromosome, nuccode files
-(<code>nuccode_&lt;genome&gt;_6mer_&lt;chr&gt;.dat</code>) encode the
-6-mer at each genomic position. They are generated automatically in the
-output directory during the first run, and reused if the run is
-relaunched.</p>
+<div id="project-definition" class="section level2">
+<h2>3. Project Definition</h2>
+<p>Each project is defined at the beginning of the script (Environment
+chunk below), specifying:</p>
+<p>Project name</p>
+<p>Path to merged BAM directory</p>
+<p>Path to MACS2 peaks directory</p>
+<p>Reference genome version (e.g., mm10, hg38)</p>
+<p>Treatments (all_set): List of all conditions (e.g., treated,
+control)</p>
+<p>Couples: Define the pairs of conditions you want to compare (for use
+in BAGFOOT2)</p>
 </div>
-<div id="bedgraph-files" class="section level4">
-<h4>2. BedGraph files</h4>
-<p>For each condition, a genome-wide cut-count BedGraph
-(<code>&lt;condition&gt;_AC_cutcount.bgr.gz</code>) is created from the
-merged BAM. Cut sites are placed at the 5′ end of each read, and
-fragments longer than 1 kb are excluded.</p>
-<!-- TODO(Leslie/Ido): makeCutCountBAMWithName() is called with its default atac = FALSE,
-so the BedGraph is NOT shifted for the Tn5 offset (only the hexamer table is, with atac = TRUE).
-Decide whether to add atac = TRUE (CLI, Rmd) and then describe the shift here. -->
+<div id="important-how-to-define-couples-in-your-project-file" class="section level2">
+<h2>Important: How to Define “couples” in Your Project File</h2>
+<p>In the couples section, always list the control condition first,
+followed by a hyphen (-), then the experimental condition (e.g.,
+control-treated).</p>
+<p>Do NOT use underscores (_)!</p>
 </div>
-<div id="hexamer-bias-table" class="section level4">
-<h4>3. Hexamer bias table</h4>
-<p>For each condition, BAGFOOT2 builds a hexamer table
-(<code>Hexamer_&lt;condition&gt;_&lt;genome&gt;_withoutMap.txt</code>).
-With <code>atac = TRUE</code>, cut sites are shifted to correct the Tn5
-offset (+4 bp on the positive strand, −5 bp on the negative strand). For
-every 6-mer, it:</p>
+<div id="pre-processing-overview" class="section level2">
+<h2>Pre-processing Overview</h2>
+</div>
+<div id="initial-processing-and-file-generation" class="section level2">
+<h2>Initial Processing and File Generation</h2>
+<p>This section describes the preprocessing steps required for each
+condition before downstream analysis.</p>
+</div>
+<div id="atac-seq-signal-normalization" class="section level2">
+<h2>ATAC-seq signal normalization</h2>
+<div id="observed-vs.-expected-table" class="section level3">
+<h3>Observed vs. Expected Table:</h3>
+<p>Using the BAM files from ATAC-seq experiments, BAGFOOT2 calculates
+the observed frequency of each 6-mer at Tn5 insertion sites. It then
+compares these observed counts to the expected frequencies derived from
+a genome-wide 6-mer library, generating an observed/expected (O/E) ratio
+for each 6-mer.</p>
+</div>
+<div id="bias-factor-application" class="section level3">
+<h3>Bias Factor Application:</h3>
+<p>The O/E ratios serve as bias correction factors to derive expected
+count per position; observed counts are normalized by these expected
+counts. BAGFOOT2 applies these factors to adjust the raw ATAC-seq
+signal, normalizing for sequence bias before any downstream analysis
+(such as accessibility, footprinting, and delta calculation).</p>
+</div>
+<div id="conceptual-explanation-with-annotated-example-code" class="section level3">
+<h3>Conceptual Explanation with Annotated Example Code</h3>
+<div id="generate-nucleotide-code-files-per-chromosome" class="section level4">
+<h4>1. Generate Nucleotide Code Files (Per Chromosome)</h4>
+<p>For each chromosome in the reference genome (mm9, mm10, hg19, hg38),
+BAGFOOT2 generates nucleotide code files (nuccode files) that encode the
+hexamer (6-mer) sequence at each genomic position. These files serve as
+a lookup table, allowing the pipeline to quickly identify the sequence
+context at any position during bias correction and footprinting
+analysis.</p>
+<p>This pre-processing step is performed once per genome and is reused
+across all samples and conditions, ensuring efficient and consistent
+sequence bias correction throughout the analysis.</p>
+</div>
+<div id="generate-bedgraph-files" class="section level4">
+<h4>2. Generate BedGraph Files</h4>
+<p>Create a BedGraph file for each condition, representing the
+genome-wide accessibility profile (Tn5 cut counts).</p>
+</div>
+<div id="hexamer-table-construction" class="section level4">
+<h4>3. Hexamer Table Construction</h4>
+<p>For each condition, BAGFOOT2 builds a hexamer (6-mer) bias table that
+quantifies sequence-dependent Tn5 cutting preferences.</p>
+<p>During this step, BAGFOOT2 corrects for the Tn5 transposase offset by
+shifting the reads (+4 bp for the positive strand, -5 bp for the
+negative strand), which accurately centers the insertion sites
+(<code>atac = TRUE</code>).</p>
+<p>Using the nuccode files, BAGFOOT2 assigns to each genomic position
+the local hexamer sequence. The corresponding Tn5 cuts are counted at
+each position. For every hexamer, BAGFOOT2 then:</p>
 <ul>
-<li>counts its genomic occurrences
-(<code>GenomicPositionCount</code>),</li>
-<li>sums the observed Tn5 cuts at these positions
-(<code>ObCuts</code>).</li>
+<li>counts how many times it appears in the genome
+(GenomicPositionCount), and</li>
+<li>aggregates the observed Tn5 cuts at all positions carrying this
+hexamer (ObCuts).</li>
 </ul>
 <p>The ratio</p>
 <pre><code>      ObCutRatio = ObCuts / GenomicPositionCount</code></pre>
-<p>estimates the cleavage propensity of each 6-mer. The table also
-contains the genomic proportion of each 6-mer (<code>GPRatio</code>) and
-the derived correction factor used to remove Tn5 sequence bias.</p>
+<p>provides an estimate of the cleavage propensity for each hexamer.</p>
+<p>The hexamer bias table also includes additional normalization
+metrics, such as:</p>
+<ul>
+<li>the genomic proportion of each hexamer among all 6-mers (GPRatio),
+and</li>
+<li>a correction factor derived from these quantities.</li>
+</ul>
+<p>This correction factor is used in downstream steps to rescale cut
+counts and remove intrinsic Tn5 sequence bias, ensuring that the
+resulting footprinting signal reflects true chromatin protection rather
+than enzymatic preference.</p>
+<p>One hexamer bias table is generated per condition. For differential
+footprinting between two conditions (a couple), BAGFOOT2 later merges
+the per-condition tables into a combined hexamer file (see summary
+table), so that both conditions are normalized using the same hexamer
+set and bias estimates.</p>
 </div>
-<div id="peak-reformatting" class="section level4">
-<h4>4. Peak reformatting</h4>
-<p>MACS2 peaks are converted to a standardized table
-(<code>&lt;condition&gt;_peaks.csv</code>).</p>
 </div>
-</div>
-<div id="step-2-merging-the-two-conditions" class="section level3">
-<h3>Step 2 — Merging the two conditions</h3>
+<div id="output-files" class="section level3">
+<h3>Output files</h3>
 <table>
-<caption>Pre-processing outputs</caption>
 <colgroup>
-<col width="12%" />
-<col width="42%" />
-<col width="45%" />
+<col width="15%" />
+<col width="26%" />
+<col width="58%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">Step</th>
-<th align="left">Output (per condition)</th>
-<th align="left">Output (control–treatment pair)</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">Nuccode files</td>
-<td align="left">nuccode_<genome><em>6mer</em><chr>.dat (shared by both
-conditions)</td>
-<td align="left"></td>
-</tr>
-<tr class="even">
-<td align="left">BedGraph</td>
-<td align="left"><condition>_AC_cutcount.bgr.gz</td>
-<td align="left"></td>
-</tr>
-<tr class="odd">
-<td align="left">Hexamer table</td>
-<td align="left">Hexamer_<condition>_<genome>_withoutMap.txt</td>
-<td align="left">Hexamer_<control>_<treatment>_merged_withoutMap.csv</td>
-</tr>
-<tr class="even">
-<td align="left">Peak reformatting</td>
-<td align="left"><condition>_peaks.csv</td>
-<td align="left">pooled_<control>_<treatment>_hotspot.csv (common peak
-universe)</td>
-</tr>
-</tbody>
-</table>
-<p>Both conditions are therefore normalized with the same hexamer bias
-estimates and analysed on the same set of peaks.</p>
-</div>
-<div id="step-3-homer-differential-peaks-and-motif-enrichment-optional" class="section level3">
-<h3>Step 3 — HOMER: differential peaks and motif enrichment
-(optional)</h3>
-<p>HOMER must be installed following the official instructions (<a href="http://homer.ucsd.edu/homer/introduction/install.html" class="uri">http://homer.ucsd.edu/homer/introduction/install.html</a>),
-with the genome installed
-(<code>perl configureHomer.pl -install mm10</code>).</p>
-<p>With <code>--homer TRUE</code>, BAGFOOT2:</p>
-<ul>
-<li>creates a HOMER tag directory per replicate
-(<code>TD_&lt;condition&gt;_&lt;index&gt;</code>),</li>
-<li>counts tags per pooled peak (<code>annotatePeaks.pl</code>),</li>
-<li>runs the differential analysis with DESeq2
-(<code>getDiffExpression.pl</code>),</li>
-<li>keeps differential peaks (<code>--peak_padj_cutoff</code>,
-<code>--peak_l2fc_cutoff</code>),</li>
-<li>runs motif enrichment on them (<code>findMotifsGenome.pl</code>)
-with the archetype motifs (<code>all_cluster_motifs.motifs</code>).</li>
-</ul>
-<p>If no differential peak passes the thresholds, BAGFOOT2 prints a
-warning and continues without HOMER. If
-<code>homer_motif_res/knownResults.txt</code> already exists, HOMER is
-skipped.</p>
-</div>
-<div id="step-4-footprinting" class="section level3">
-<h3>Step 4 — Footprinting</h3>
-<p>For each condition, a <code>CutCount</code> object is created from
-the BedGraph. Footprinting is run with <code>GFoot()</code> on all
-archetype motif occurrences within the pooled peaks, using the merged
-hexamer table for bias correction (<code>GFootOption()</code>).</p>
-<p>Motifs are processed in <strong>batches of 25</strong> (output
-folders
-<code>OUTPUT_&lt;control&gt;-&lt;treatment&gt;_&lt;first motif&gt;</code>);
-finished batches are skipped when a run is relaunched.</p>
-<p>For each motif, BAGFOOT2 quantifies:</p>
-<ul>
-<li><strong>footprint depth (FPD)</strong>: depletion of Tn5 cuts over
-the motif core relative to its flanks (protection by the bound TF),</li>
-<li><strong>flanking accessibility (FA)</strong>: Tn5 cuts in the
-regions surrounding the motif.</li>
-</ul>
-</div>
-<div id="step-5-statistics-and-visualization" class="section level3">
-<h3>Step 5 — Statistics and visualization</h3>
-<p>All batch tables are merged into one table, with one row per motif,
-containing:</p>
-<ul>
-<li>footprint depths in control and treatment (<code>fdepth1</code>,
-<code>fdepth2</code>),</li>
-<li>mean cut counts (<code>meancc1</code>, <code>meancc2</code>),</li>
-<li>log2 ratios of cuts, treatment vs control, at the motif, in the
-flanks and in the whole window (<code>lrmotif</code>,
-<code>lrflanking</code>, <code>lrtotal</code>),</li>
-<li>the number of motif sites (<code>numsite</code>).</li>
-</ul>
-<p>BAGFOOT2 then:</p>
-<ol style="list-style-type: decimal">
-<li>computes ΔFA (<code>lrtotal</code>, treatment vs control) and ΔFPD
-for each motif,</li>
-<li>draws the bagplot: motifs are classified as <code>bag</code>,
-<code>fence</code> or <code>outlier</code>,</li>
-<li>estimates the robust centre and covariance of the motif cloud with
-MCD and computes the robust Mahalanobis distance D2 of each motif,</li>
-<li>derives p-values from the finite-sample F approximation and adjusts
-them (FDR),</li>
-<li>classifies outlier motifs by direction: <code>increase</code>
-(higher activity in the treatment), <code>decrease</code> (higher in the
-control) or <code>discordant</code> (ΔFA and ΔFPD of opposite
-signs),</li>
-<li>flags HOMER-enriched motifs (if HOMER was run),</li>
-<li>draws the D2 and FDR barplots of the significant (FDR &lt; 0.05)
-<code>increase</code> and <code>decrease</code> motifs, and writes the
-result table.</li>
-</ol>
-</div>
-</div>
-<div id="output-files" class="section level2">
-<h2>Output files</h2>
-<p>All result files share the prefix
-<code>bagfoot2_cutcount_diff_total_footprinting_depth_&lt;control&gt;_&lt;treatment&gt;</code>.</p>
-<table>
-<colgroup>
-<col width="32%" />
-<col width="67%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">File</th>
-<th align="left">Content</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left"><prefix>_bfoot2.pdf, <prefix>_bfoot2_zoomIn.pdf</td>
-<td align="left">Bagplot of all motifs; significant motifs as filled
-squares, HOMER-enriched motifs circled in gold</td>
-</tr>
-<tr class="even">
-<td align="left"><prefix>_maha_D2.pdf / .tiff</td>
-<td align="left">D2 barplot: top significant TFs ranked by D2 (fill =
-FDR), increase and decrease panels</td>
-</tr>
-<tr class="odd">
-<td align="left"><prefix>_maha_padj.pdf / .tiff</td>
-<td align="left">FDR barplot: top significant TFs ranked by −log10 FDR
-(fill = D2), increase and decrease panels</td>
-</tr>
-<tr class="even">
-<td align="left"><prefix>_bagfoot2_output.csv</td>
-<td align="left">Result table with all values per motif (see below)</td>
-</tr>
-<tr class="odd">
-<td align="left">*_hotspot_footprint_depth_table_merged.csv</td>
-<td align="left">Raw footprinting statistics for all motifs</td>
-</tr>
-<tr class="even">
-<td align="left">OUTPUT_<control>-<treatment>_<n>/</td>
-<td align="left">Per-batch footprint profiles and tables</td>
-</tr>
-<tr class="odd">
-<td align="left">homer_motif_res/knownResults.txt</td>
-<td align="left">HOMER motif enrichment (optional)</td>
-</tr>
-</tbody>
-</table>
-<div id="result-table-columns" class="section level3">
-<h3>Result table columns</h3>
-<table>
-<colgroup>
-<col width="51%" />
-<col width="48%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">Column</th>
+<th align="left">Output_File</th>
 <th align="left">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">motif_name</td>
-<td align="left">Display name of the motif cluster</td>
+<td align="left">Preprocessing</td>
+<td align="left">BedGraph</td>
+<td align="left">Genome-wide Accessibility profile</td>
 </tr>
 <tr class="even">
-<td align="left">archetype_name</td>
-<td align="left">Archetype motif cluster code (e.g. AC0001)</td>
+<td align="left">Hexamer</td>
+<td align="left">nuccode + Hexamer table</td>
+<td align="left">hexamer genome index + hexamer bias / frequency
+table</td>
 </tr>
 <tr class="odd">
-<td align="left">tf_name, family_name, motif_id, source_id, motif_type,
-PMID</td>
-<td align="left">Annotation of the motif cluster</td>
+<td align="left">Peaks</td>
+<td align="left">peaks reformatted as CSV</td>
+<td align="left">peaks in standardized CSV format</td>
+</tr>
+</tbody>
+</table>
+<p>When comparing two conditions (e.g., control vs treatment), BAGFOOT2
+generates additional files that combine information from both samples.
+These “couple-level” outputs ensure that footprinting and accessibility
+differences are evaluated on a unified genomic reference.</p>
+<p>Summary Table:</p>
+<table>
+<caption>Summary Table</caption>
+<colgroup>
+<col width="15%" />
+<col width="35%" />
+<col width="48%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Step</th>
+<th align="center">Output (per condition)</th>
+<th align="center">Output (per Couple)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Generate nuccode files ** (once per genome)</td>
+<td align="center">Nuccode* files
+(nuccode_<genome><em>6mer</em><chr>.dat, hexamer index in the genome,
+shared by all conditions)</td>
+<td align="center"></td>
 </tr>
 <tr class="even">
-<td align="left">delta_FA</td>
-<td align="left">Change in flanking accessibility (treatment vs
-control)</td>
+<td align="left">Generate BedGraph</td>
+<td align="center">BedGraph file (<condition>_AC_cutcount.bgr.gz)</td>
+<td align="center"></td>
 </tr>
 <tr class="odd">
-<td align="left">delta_FPD</td>
-<td align="left">Change in footprint depth (treatment vs control)</td>
+<td align="left">Build hexamer table (incl. Tn5 offset correction)</td>
+<td align="center">Hexamer bias file
+(Hexamer_<condition>_<genome>_withoutMap.txt)</td>
+<td align="center">Combined hexamer
+(Hexamer_<control>_<treatment>_merged_withoutMap.csv)</td>
 </tr>
 <tr class="even">
-<td align="left">category</td>
-<td align="left">Bagplot position: bag, fence or outlier</td>
-</tr>
-<tr class="odd">
-<td align="left">mahalanobis_distance_D2</td>
-<td align="left">Robust Mahalanobis distance (MCD)</td>
-</tr>
-<tr class="even">
-<td align="left">D2_pvalue</td>
-<td align="left">P-value</td>
-</tr>
-<tr class="odd">
-<td align="left">D2_qvalue</td>
-<td align="left">FDR-adjusted p-value (Benjamini–Hochberg)</td>
-</tr>
-<tr class="even">
-<td align="left">D2_significant</td>
-<td align="left">TRUE if D2_qvalue &lt; 0.05</td>
-</tr>
-<tr class="odd">
-<td align="left">direction</td>
-<td align="left">increase, decrease, discordant or non_outlier</td>
-</tr>
-<tr class="even">
-<td align="left">Homer_significant</td>
-<td align="left">TRUE if enriched in HOMER (only when HOMER was
-run)</td>
-</tr>
-<tr class="odd">
-<td align="left">halfspace_depth</td>
-<td align="left">Bagplot halfspace depth</td>
-</tr>
-<tr class="even">
-<td align="left">euclidean_distance</td>
-<td align="left">Euclidean distance to the mean</td>
+<td align="left">Peak reformatting</td>
+<td align="center">Hotspot table (MACS2 peaks reformatted to BAGFOOT2
+format; one row per peak with placeholder footprint metrics)</td>
+<td align="center">Combined peaks / pooled hotspot
+(pooled_<control>_<treatment>_hotspot.csv, merged hotspot table defining
+a common peaks universe for both conditions)</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
-<div id="running-bagfoot2-step-by-step-in-r" class="section level2">
-<h2>Running BAGFOOT2 step by step in R</h2>
-<p>The command-line tool runs the code below. Running it in R is useful
-to inspect intermediate objects.</p>
-<p>A ready-to-use R Markdown version of this workflow, where you only
-edit the lines marked <code># &lt;-- EDIT</code>, is available on
-GitHub: <a href="https://github.com/goldsteinlab-tech/BAGFOOT2/blob/main/inst/scripts/bagfoot2_step_by_step.Rmd">inst/scripts/bagfoot2_step_by_step.Rmd</a>.
-After installing the package, it is also found with
-<code>system.file(&quot;scripts&quot;, &quot;bagfoot2_step_by_step.Rmd&quot;, package = &quot;bagfoot2&quot;)</code>.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">library</span>(bagfoot2)</span>
+<div id="example-script-illustrating-the-workflow" class="section level2">
+<h2>Example Script Illustrating the Workflow</h2>
+<p>Your script should be in the directory bg_dir.</p>
+<p>A ready-to-use R Markdown version of this script is installed with
+the package:
+<code>system.file(&quot;scripts&quot;, &quot;bagfoot2_step_by_step.Rmd&quot;, package = &quot;bagfoot2&quot;)</code>.
+Only the lines marked <code># &lt;-- EDIT</code> need to be changed.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(bagfoot2)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co"># USER SETTINGS: edit the lines marked with  # &lt;-- EDIT</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>numcores <span class="ot">&lt;-</span> <span class="dv">2</span>                                    <span class="co"># &lt;-- EDIT: number of CPU cores to use</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>project <span class="ot">&lt;-</span> <span class="st">&quot;fed_fasted&quot;</span>                          <span class="co"># &lt;-- EDIT: project name</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>mm      <span class="ot">&lt;-</span> <span class="st">&quot;mm10&quot;</span>                                <span class="co"># &lt;-- EDIT: genome version (mm10 or hg38)</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co"># input and output folders (paths must end with &quot;/&quot;)</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>bg_dir    <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;/path/to/bg_files_&quot;</span>, project, <span class="st">&quot;/&quot;</span>)   <span class="co"># &lt;-- EDIT: output directory</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>macs2_dir <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;/path/to/&quot;</span>, project, <span class="st">&quot;/macs2/&quot;</span>)      <span class="co"># &lt;-- EDIT: MACS2 peak files</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>bam_dir   <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;/path/to/&quot;</span>, project, <span class="st">&quot;/bam_merged/&quot;</span>) <span class="co"># &lt;-- EDIT: merged (and replicate) BAM files</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>mm_files_dir <span class="ot">&lt;-</span> <span class="st">&quot;/path/to/mm10_files/&quot;</span>     <span class="co"># &lt;-- EDIT: motif files folder</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co"># or, to download the motif files automatically from Zenodo:</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co"># mm_files_dir &lt;- ensure_motif_db(mm)</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="cf">if</span> (project <span class="sc">==</span> <span class="st">&quot;fed_fasted&quot;</span>) {</span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a>  <span class="co"># set1 is the control, set2 is the treatment</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a>  all_set <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;fed&quot;</span>, <span class="st">&quot;fasted&quot;</span>)                  <span class="co"># &lt;-- EDIT: conditions (control first)</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a>  <span class="co">#⚠️ in couples: CONTROL first, then a hyphen (-, not an underscore), then the TREATMENT</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>  couples <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;fed-fasted&quot;</span>)                     <span class="co"># &lt;-- EDIT: control-treatment</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>}</span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co"># </span><span class="re">END</span><span class="co"> OF USER SETTINGS (no change needed below)</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="fu">assignInNamespace</span>(<span class="st">&quot;MCCORES&quot;</span>,       <span class="fu">as.integer</span>(numcores), <span class="at">ns =</span> <span class="st">&quot;bagfoot2&quot;</span>)   <span class="co"># footprinting workers</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="fu">assignInNamespace</span>(<span class="st">&quot;MCCORES_MOTIF&quot;</span>, <span class="dv">1</span><span class="dt">L</span>,                   <span class="at">ns =</span> <span class="st">&quot;bagfoot2&quot;</span>)   <span class="co"># motifs computed at the same time</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="fu">assignInNamespace</span>(<span class="st">&quot;BFOOT_DEBUG&quot;</span>,   <span class="cn">FALSE</span>,                <span class="at">ns =</span> <span class="st">&quot;bagfoot2&quot;</span>)   <span class="co"># TRUE prints large debug matrices</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co"># create the output directory if it does not exist yet</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="fu">dir.create</span>(bg_dir, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a>knitr<span class="sc">::</span>opts_knit<span class="sc">$</span><span class="fu">set</span>(<span class="at">root.dir =</span> bg_dir)</span></code></pre></div>
+<p>For each condition:</p>
+<ul>
+<li><p>A BedGraph file is created.</p></li>
+<li><p>A hexamer table is generated (with Tn5 offset
+correction).</p></li>
+</ul>
+<p>This step will produce:</p>
+<ol style="list-style-type: upper-alpha">
+<li>Per treatment/condition (one set per sample):</li>
+</ol>
+<ul>
+<li><p>BedGraph: Genome-wide accessibility profile file.</p></li>
+<li><p>Hexamer file and the corresponding nuccode* files.</p></li>
+<li><p>Peak file reformatted to a standardized CSV table.</p></li>
+</ul>
+<ol start="2" style="list-style-type: upper-alpha">
+<li>Pair of conditions (couple):</li>
+</ol>
+<ul>
+<li><p>Combined peaks: Merged peak regions defining a shared peak
+universe for both conditions.</p></li>
+<li><p>Combined hexamer: Merged hexamer bias tables used for comparative
+analysis between conditions.</p></li>
+</ul>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">setwd</span>(bg_dir)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="cf">for</span> (treat <span class="cf">in</span> all_set) {</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  bamfile <span class="ot">&lt;-</span> <span class="fu">paste0</span>(bam_dir, treat, <span class="st">&quot;.sorted.bam&quot;</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="co"># count the number of cuts in the BAM file</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  cc <span class="ot">&lt;-</span> <span class="fu">countReadsBAM</span>(bamfile, mm)</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">&quot;treat:&quot;</span>, treat, <span class="st">&quot;cc:&quot;</span>, cc))</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>  <span class="fu">assign</span>(<span class="fu">paste0</span>(<span class="st">&quot;cc_&quot;</span>, treat), cc)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="co"># The two steps below are the longest of the pre-processing.</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>  <span class="co"># If their output files already exist (e.g. when the script is run again),</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="co"># they are skipped. To recompute them, delete these files first.</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  bedgraph_file <span class="ot">&lt;-</span> <span class="fu">paste0</span>(bg_dir, treat, <span class="st">&quot;_AC_cutcount.bgr.gz&quot;</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>  hexamer_file  <span class="ot">&lt;-</span> <span class="fu">paste0</span>(bg_dir, <span class="st">&quot;Hexamer_&quot;</span>, treat, <span class="st">&quot;_&quot;</span>, mm, <span class="st">&quot;_withoutMap.txt&quot;</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="co"># generate the BedGraph file of cut counts</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(bedgraph_file)) {</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>    cutcountfile <span class="ot">&lt;-</span> <span class="fu">makeCutCountBAMWithName</span>(bamfile,</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>                                            <span class="at">name      =</span> <span class="fu">basenameWithoutExt</span>(bamfile),</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>                                            <span class="at">refgenome =</span> mm)</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;BedGraph already exists for &quot;</span>, treat, <span class="st">&quot;: skipped&quot;</span>)</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>  }</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a>  <span class="co"># hexamer bias frequency table (without mappability)</span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(hexamer_file)) {</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a>    <span class="fu">MakeBiasCorrectionTableBAM</span>(<span class="at">bamfile   =</span> bamfile,</span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a>                               <span class="at">outfile   =</span> <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, treat, <span class="st">&quot;_&quot;</span>, mm, <span class="st">&quot;_withoutMap.txt&quot;</span>),</span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>                               <span class="at">refgenome =</span> mm,</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a>                               <span class="at">np        =</span> <span class="dv">6</span>,</span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a>                               <span class="at">atac      =</span> <span class="cn">TRUE</span>,   <span class="co"># Set TRUE for ATAC data. The default value is FALSE</span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a>                               <span class="at">mapdir    =</span> <span class="st">&quot;&quot;</span>)     <span class="co"># empty: mappability is not used</span></span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;Hexamer table already exists for &quot;</span>, treat, <span class="st">&quot;: skipped&quot;</span>)</span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a>  }</span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a>  <span class="co"># convert MACS2 peaks to CSV</span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a>  macs <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">paste0</span>(macs2_dir, treat, <span class="st">&quot;_peaks.narrowPeak&quot;</span>),</span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a>                   <span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">header =</span> <span class="cn">FALSE</span>, <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a>  <span class="fu">names</span>(macs)[<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;chr&quot;</span>, <span class="st">&quot;st&quot;</span>, <span class="st">&quot;ed&quot;</span>)</span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a>  nr <span class="ot">&lt;-</span> <span class="fu">nrow</span>(macs)</span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a></span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a>  hotspot <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">ID =</span> <span class="dv">1</span><span class="sc">:</span>nr, <span class="at">chrom. =</span> macs<span class="sc">$</span>chr, <span class="at">start =</span> macs<span class="sc">$</span>st <span class="sc">+</span> <span class="dv">1</span>, <span class="at">end =</span> macs<span class="sc">$</span>ed,</span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a>                        <span class="at">MaxD   =</span> <span class="fu">rep</span>(<span class="dv">0</span>, nr),</span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a>                        <span class="at">AveD   =</span> <span class="fu">rep</span>(<span class="dv">0</span>, nr),</span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a>                        <span class="at">Zscore =</span> <span class="fu">rep</span>(<span class="dv">0</span>, nr),</span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a>                        <span class="at">pvalue =</span> <span class="fu">rep</span>(<span class="dv">0</span>, nr))</span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a></span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a>  <span class="fu">write.table</span>(hotspot, <span class="at">file =</span> <span class="fu">paste0</span>(bg_dir, treat, <span class="st">&quot;_peaks.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a>}</span>
+<span id="cb6-52"><a href="#cb6-52" tabindex="-1"></a></span>
+<span id="cb6-53"><a href="#cb6-53" tabindex="-1"></a><span class="co"># remove temporary files</span></span>
+<span id="cb6-54"><a href="#cb6-54" tabindex="-1"></a>temp <span class="ot">&lt;-</span> <span class="fu">list.files</span>(bg_dir,</span>
+<span id="cb6-55"><a href="#cb6-55" tabindex="-1"></a>                   <span class="at">pattern    =</span> <span class="fu">glob2rx</span>(<span class="st">&quot;temp*.dat&quot;</span>),</span>
+<span id="cb6-56"><a href="#cb6-56" tabindex="-1"></a>                   <span class="at">recursive  =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb6-57"><a href="#cb6-57" tabindex="-1"></a>                   <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-58"><a href="#cb6-58" tabindex="-1"></a><span class="fu">file.remove</span>(temp)</span>
+<span id="cb6-59"><a href="#cb6-59" tabindex="-1"></a></span>
+<span id="cb6-60"><a href="#cb6-60" tabindex="-1"></a><span class="co"># merge the files of each couple</span></span>
+<span id="cb6-61"><a href="#cb6-61" tabindex="-1"></a><span class="fu">setwd</span>(bg_dir)</span>
+<span id="cb6-62"><a href="#cb6-62" tabindex="-1"></a><span class="cf">for</span> (c <span class="cf">in</span> couples) {</span>
+<span id="cb6-63"><a href="#cb6-63" tabindex="-1"></a>  <span class="fu">print</span>(c)</span>
+<span id="cb6-64"><a href="#cb6-64" tabindex="-1"></a>  set1 <span class="ot">&lt;-</span> <span class="fu">str_split_fixed</span>(c, <span class="st">&quot;-&quot;</span>, <span class="dv">2</span>)[<span class="dv">1</span>]   <span class="co"># control</span></span>
+<span id="cb6-65"><a href="#cb6-65" tabindex="-1"></a>  set2 <span class="ot">&lt;-</span> <span class="fu">str_split_fixed</span>(c, <span class="st">&quot;-&quot;</span>, <span class="dv">2</span>)[<span class="dv">2</span>]   <span class="co"># treatment</span></span>
+<span id="cb6-66"><a href="#cb6-66" tabindex="-1"></a></span>
+<span id="cb6-67"><a href="#cb6-67" tabindex="-1"></a>  <span class="co"># combined peaks (common peak universe for both conditions)</span></span>
+<span id="cb6-68"><a href="#cb6-68" tabindex="-1"></a>  <span class="fu">assign</span>(<span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_peaks&quot;</span>), <span class="fu">combineTwoHotspots</span>(</span>
+<span id="cb6-69"><a href="#cb6-69" tabindex="-1"></a>    <span class="fu">paste0</span>(bg_dir, set1, <span class="st">&quot;_peaks.csv&quot;</span>),</span>
+<span id="cb6-70"><a href="#cb6-70" tabindex="-1"></a>    <span class="fu">paste0</span>(bg_dir, set2, <span class="st">&quot;_peaks.csv&quot;</span>),</span>
+<span id="cb6-71"><a href="#cb6-71" tabindex="-1"></a>    set1, set2))</span>
+<span id="cb6-72"><a href="#cb6-72" tabindex="-1"></a></span>
+<span id="cb6-73"><a href="#cb6-73" tabindex="-1"></a>  <span class="co"># remove the duplicated ID column if present</span></span>
+<span id="cb6-74"><a href="#cb6-74" tabindex="-1"></a>  pooled <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">paste0</span>(bg_dir, <span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot.csv&quot;</span>))</span>
+<span id="cb6-75"><a href="#cb6-75" tabindex="-1"></a>  <span class="cf">if</span> (<span class="st">&quot;ID.1&quot;</span> <span class="sc">%in%</span> <span class="fu">colnames</span>(pooled)) {</span>
+<span id="cb6-76"><a href="#cb6-76" tabindex="-1"></a>    pooled <span class="ot">&lt;-</span> pooled <span class="sc">%&gt;%</span></span>
+<span id="cb6-77"><a href="#cb6-77" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>ID.1)</span>
+<span id="cb6-78"><a href="#cb6-78" tabindex="-1"></a>    <span class="fu">write.csv</span>(pooled, <span class="fu">paste0</span>(bg_dir, <span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot.csv&quot;</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb6-79"><a href="#cb6-79" tabindex="-1"></a>  }</span>
+<span id="cb6-80"><a href="#cb6-80" tabindex="-1"></a></span>
+<span id="cb6-81"><a href="#cb6-81" tabindex="-1"></a>  <span class="co"># combined hexamer table (same bias correction for both conditions)</span></span>
+<span id="cb6-82"><a href="#cb6-82" tabindex="-1"></a>  <span class="fu">assign</span>(<span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2), <span class="fu">merge_two_frequency_tables</span>(</span>
+<span id="cb6-83"><a href="#cb6-83" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, mm, <span class="st">&quot;_withoutMap.txt&quot;</span>),</span>
+<span id="cb6-84"><a href="#cb6-84" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set2, <span class="st">&quot;_&quot;</span>, mm, <span class="st">&quot;_withoutMap.txt&quot;</span>),</span>
+<span id="cb6-85"><a href="#cb6-85" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_merged_withoutMap.csv&quot;</span>)))</span>
+<span id="cb6-86"><a href="#cb6-86" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="homer-integration-differential-atac-seq-and-motif-enrichment" class="section level2">
+<h2>HOMER Integration: Differential ATAC-seq and Motif Enrichment</h2>
+</div>
+<div id="run-homer" class="section level2">
+<h2>Run HOMER</h2>
+<p>To use this part of the workflow with BAGFOOT2, it is essential to
+have HOMER installed on your system, following the official
+recommendations provided on the HOMER installation page:</p>
+<p><a href="http://homer.ucsd.edu/homer/introduction/install.html" class="uri">http://homer.ucsd.edu/homer/introduction/install.html</a></p>
+<p>Please make sure to carefully follow the instructions on the official
+HOMER website to ensure a correct installation and full access to all
+required features.</p>
+<p>With BAGFOOT2, it is highly recommended to run HOMER to perform motif
+analysis on differentially accessible ATAC-seq peaks.</p>
+<p>Integrating HOMER allows you to identify transcription factor motifs
+that are enriched in regions showing differential accessibility between
+conditions.</p>
+<p>In this chunk, the workflow proceeds as follows:</p>
+<ul>
+<li><p>Load the peak files and all BAM files for each replicate within
+every condition.</p></li>
+<li><p>Use HOMER to count the number of tags per peak for each
+replicate.</p></li>
+<li><p>Normalize these counts across replicates and conditions.</p></li>
+<li><p>Perform differential analysis with DESeq2 via HOMER, generating
+an annotated file of differentially accessible peaks.</p></li>
+<li><p>For these differential peaks, run motif enrichment analysis with
+HOMER.</p></li>
+</ul>
+<p>The results of the motif enrichment analysis are displayed as gold
+rings in BAGFOOT2’s bagplot and labelled “ME” in the barplots. In
+addition, HOMER motif enrichment appears in the BAGFOOT2 output
+table.</p>
+<p>The number of replicates can differ between conditions (e.g. 3 and
+2). If the HOMER results of a couple already exist
+(<code>homer_motif_res_&lt;control&gt;_&lt;treatment&gt;/knownResults.txt</code>),
+HOMER is skipped for this couple.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">setwd</span>(bg_dir)</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>numcores <span class="ot">&lt;-</span> <span class="dv">4</span></span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>bg_dir   <span class="ot">&lt;-</span> <span class="st">&quot;/path/project/bagfoot2_fed_fasted/&quot;</span>   <span class="co"># output directory</span></span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>bam_dir  <span class="ot">&lt;-</span> <span class="st">&quot;/path/project/bam_merged/&quot;</span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>peak_dir <span class="ot">&lt;-</span> <span class="st">&quot;/path/project/macs2/&quot;</span></span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>mm       <span class="ot">&lt;-</span> <span class="st">&quot;mm10&quot;</span></span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="fu">assign</span>(<span class="st">&quot;mm&quot;</span>, mm, <span class="at">envir =</span> .GlobalEnv)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co"># USER SETTINGS (HOMER): edit the lines marked with  # &lt;-- EDIT</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>use_homer <span class="ot">&lt;-</span> <span class="cn">TRUE</span>                                    <span class="co"># &lt;-- EDIT: FALSE to skip HOMER</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>homer_bin <span class="ot">&lt;-</span> <span class="st">&quot;/path/to/homer/bin/&quot;</span>    <span class="co"># &lt;-- EDIT: HOMER bin directory</span></span>
 <span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a></span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>mm_files_dir <span class="ot">&lt;-</span> <span class="fu">ensure_motif_db</span>(mm)   <span class="co"># or the path to your motif files</span></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a></span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>set1 <span class="ot">&lt;-</span> <span class="st">&quot;fed&quot;</span>      <span class="co"># control</span></span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>set2 <span class="ot">&lt;-</span> <span class="st">&quot;fasted&quot;</span>   <span class="co"># treatment</span></span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a></span>
-<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="fu">dir.create</span>(bg_dir, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>, <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="fu">setwd</span>(bg_dir)</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co"># replicate indices of each condition (the numbers can differ, e.g. 1:3 and 1:2)</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>reps_control   <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>   <span class="co"># &lt;-- EDIT: fed_1.bam, fed_2.bam, fed_3.bam</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>reps_treatment <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>   <span class="co"># &lt;-- EDIT: fasted_1.bam, fasted_2.bam, fasted_3.bam</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co"># thresholds to select the differential peaks</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>padj_cutoff <span class="ot">&lt;-</span> <span class="fl">0.05</span>     <span class="co"># &lt;-- EDIT (optional): adjusted p-value</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>l2fc_cutoff <span class="ot">&lt;-</span> <span class="fl">0.5</span>      <span class="co"># &lt;-- EDIT (optional): |log2 fold change|</span></span>
 <span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a></span>
-<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co"># ---- Step 1: per condition ---------------------------------------------------</span></span>
-<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="cf">for</span> (treat <span class="cf">in</span> <span class="fu">c</span>(set1, set2)) {</span>
-<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>  bamfile <span class="ot">&lt;-</span> <span class="fu">file.path</span>(bam_dir, <span class="fu">paste0</span>(treat, <span class="st">&quot;_merged.bam&quot;</span>))</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co"># </span><span class="re">END</span><span class="co"> OF USER SETTINGS (no change needed below)</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co"># ==============================================================================</span></span>
 <span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a></span>
-<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>  <span class="fu">countReadsBAM</span>(bamfile, mm)</span>
-<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>  <span class="fu">makeCutCountBAMWithName</span>(bamfile, <span class="at">name =</span> treat, <span class="at">refgenome =</span> mm)</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co"># directory containing the replicate BAM files</span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>work_dir <span class="ot">&lt;-</span> bam_dir</span>
 <span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a></span>
-<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>  <span class="fu">MakeBiasCorrectionTableBAM</span>(</span>
-<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>    <span class="at">bamfile   =</span> bamfile,</span>
-<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>    <span class="at">outfile   =</span> <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, treat, <span class="st">&quot;_&quot;</span>, mm, <span class="st">&quot;_withoutMap.txt&quot;</span>),</span>
-<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>    <span class="at">refgenome =</span> mm,</span>
-<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>    <span class="at">np        =</span> <span class="dv">6</span>,</span>
-<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a>    <span class="at">atac      =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>    <span class="at">mapdir    =</span> <span class="st">&quot;&quot;</span></span>
-<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a>  )</span>
-<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a></span>
-<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a>  macs <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="fu">file.path</span>(peak_dir, <span class="fu">paste0</span>(treat, <span class="st">&quot;_peaks.narrowPeak&quot;</span>)),</span>
-<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a>                     <span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">header =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a>  nr <span class="ot">&lt;-</span> <span class="fu">nrow</span>(macs)</span>
-<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a>  hotspot <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">ID =</span> <span class="dv">1</span><span class="sc">:</span>nr, <span class="at">chrom. =</span> macs<span class="sc">$</span>V1, <span class="at">start =</span> macs<span class="sc">$</span>V2 <span class="sc">+</span> <span class="dv">1</span>, <span class="at">end =</span> macs<span class="sc">$</span>V3,</span>
-<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a>                        <span class="at">MaxD =</span> <span class="dv">0</span>, <span class="at">AveD =</span> <span class="dv">0</span>, <span class="at">Zscore =</span> <span class="dv">0</span>, <span class="at">pvalue =</span> <span class="dv">0</span>)</span>
-<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a>  <span class="fu">write.table</span>(hotspot, <span class="fu">paste0</span>(treat, <span class="st">&quot;_peaks.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;,&quot;</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a>}</span>
-<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a></span>
-<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a><span class="co"># ---- Step 2: merge the pair --------------------------------------------------</span></span>
-<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a><span class="fu">combineTwoHotspots</span>(<span class="fu">paste0</span>(set1, <span class="st">&quot;_peaks.csv&quot;</span>), <span class="fu">paste0</span>(set2, <span class="st">&quot;_peaks.csv&quot;</span>), set1, set2)</span>
-<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a></span>
-<span id="cb7-46"><a href="#cb7-46" tabindex="-1"></a><span class="fu">merge_two_frequency_tables</span>(</span>
-<span id="cb7-47"><a href="#cb7-47" tabindex="-1"></a>  <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, mm, <span class="st">&quot;_withoutMap.txt&quot;</span>),</span>
-<span id="cb7-48"><a href="#cb7-48" tabindex="-1"></a>  <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set2, <span class="st">&quot;_&quot;</span>, mm, <span class="st">&quot;_withoutMap.txt&quot;</span>),</span>
-<span id="cb7-49"><a href="#cb7-49" tabindex="-1"></a>  <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_merged_withoutMap.csv&quot;</span>)</span>
-<span id="cb7-50"><a href="#cb7-50" tabindex="-1"></a>)</span>
-<span id="cb7-51"><a href="#cb7-51" tabindex="-1"></a></span>
-<span id="cb7-52"><a href="#cb7-52" tabindex="-1"></a><span class="co"># ---- Step 3 (optional): HOMER -------------------------------------------------</span></span>
-<span id="cb7-53"><a href="#cb7-53" tabindex="-1"></a>run_homer_step <span class="ot">&lt;-</span> <span class="cn">FALSE</span></span>
-<span id="cb7-54"><a href="#cb7-54" tabindex="-1"></a>homer_results_file <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
-<span id="cb7-55"><a href="#cb7-55" tabindex="-1"></a></span>
-<span id="cb7-56"><a href="#cb7-56" tabindex="-1"></a><span class="cf">if</span> (run_homer_step) {</span>
-<span id="cb7-57"><a href="#cb7-57" tabindex="-1"></a>  homer_bin <span class="ot">&lt;-</span> <span class="st">&quot;/path/homer/bin&quot;</span></span>
-<span id="cb7-58"><a href="#cb7-58" tabindex="-1"></a>  reps_ctrl  <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>   <span class="co"># fed_1.bam, fed_2.bam, fed_3.bam</span></span>
-<span id="cb7-59"><a href="#cb7-59" tabindex="-1"></a>  reps_treat <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>   <span class="co"># fasted_1.bam, fasted_2.bam</span></span>
-<span id="cb7-60"><a href="#cb7-60" tabindex="-1"></a></span>
-<span id="cb7-61"><a href="#cb7-61" tabindex="-1"></a>  peaks_homer <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot_modify.txt&quot;</span>)</span>
-<span id="cb7-62"><a href="#cb7-62" tabindex="-1"></a>  <span class="fu">process_hotspot_file</span>(<span class="fu">paste0</span>(<span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot.csv&quot;</span>), peaks_homer)</span>
-<span id="cb7-63"><a href="#cb7-63" tabindex="-1"></a></span>
-<span id="cb7-64"><a href="#cb7-64" tabindex="-1"></a>  <span class="co"># one HOMER tag directory per replicate</span></span>
-<span id="cb7-65"><a href="#cb7-65" tabindex="-1"></a>  td_dirs <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
-<span id="cb7-66"><a href="#cb7-66" tabindex="-1"></a>  <span class="cf">for</span> (cond <span class="cf">in</span> <span class="fu">c</span>(set1, set2)) {</span>
-<span id="cb7-67"><a href="#cb7-67" tabindex="-1"></a>    reps <span class="ot">&lt;-</span> <span class="cf">if</span> (cond <span class="sc">==</span> set1) reps_ctrl <span class="cf">else</span> reps_treat</span>
-<span id="cb7-68"><a href="#cb7-68" tabindex="-1"></a>    <span class="cf">for</span> (i <span class="cf">in</span> reps) {</span>
-<span id="cb7-69"><a href="#cb7-69" tabindex="-1"></a>      td <span class="ot">&lt;-</span> <span class="fu">file.path</span>(bam_dir, <span class="fu">paste0</span>(<span class="st">&quot;TD_&quot;</span>, cond, <span class="st">&quot;_&quot;</span>, i))</span>
-<span id="cb7-70"><a href="#cb7-70" tabindex="-1"></a>      <span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(td)) {</span>
-<span id="cb7-71"><a href="#cb7-71" tabindex="-1"></a>        <span class="fu">system</span>(<span class="fu">paste</span>(<span class="fu">file.path</span>(homer_bin, <span class="st">&quot;makeTagDirectory&quot;</span>), td,</span>
-<span id="cb7-72"><a href="#cb7-72" tabindex="-1"></a>                     <span class="fu">file.path</span>(bam_dir, <span class="fu">paste0</span>(cond, <span class="st">&quot;_&quot;</span>, i, <span class="st">&quot;.bam&quot;</span>)), <span class="st">&quot;-format sam&quot;</span>))</span>
-<span id="cb7-73"><a href="#cb7-73" tabindex="-1"></a>      }</span>
-<span id="cb7-74"><a href="#cb7-74" tabindex="-1"></a>      td_dirs <span class="ot">&lt;-</span> <span class="fu">c</span>(td_dirs, td)</span>
-<span id="cb7-75"><a href="#cb7-75" tabindex="-1"></a>    }</span>
-<span id="cb7-76"><a href="#cb7-76" tabindex="-1"></a>  }</span>
-<span id="cb7-77"><a href="#cb7-77" tabindex="-1"></a></span>
-<span id="cb7-78"><a href="#cb7-78" tabindex="-1"></a>  annot_out <span class="ot">&lt;-</span> <span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_annot.txt&quot;</span>)</span>
-<span id="cb7-79"><a href="#cb7-79" tabindex="-1"></a>  diff_out  <span class="ot">&lt;-</span> <span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_output.txt&quot;</span>)</span>
-<span id="cb7-80"><a href="#cb7-80" tabindex="-1"></a></span>
-<span id="cb7-81"><a href="#cb7-81" tabindex="-1"></a>  <span class="fu">run_annotate_peak</span>(homer_bin, bam_dir, peaks_homer, mm, td_dirs, annot_out)</span>
-<span id="cb7-82"><a href="#cb7-82" tabindex="-1"></a>  <span class="fu">run_diff_expression</span>(homer_bin, bam_dir, annot_out, diff_out,</span>
-<span id="cb7-83"><a href="#cb7-83" tabindex="-1"></a>                      <span class="fu">rep</span>(set1, <span class="fu">length</span>(reps_ctrl)), <span class="fu">rep</span>(set2, <span class="fu">length</span>(reps_treat)))</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="cf">if</span> (use_homer) {</span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>  <span class="cf">for</span> (c <span class="cf">in</span> couples) {</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>    set1 <span class="ot">&lt;-</span> <span class="fu">str_split_fixed</span>(c, <span class="st">&quot;-&quot;</span>, <span class="dv">2</span>)[<span class="dv">1</span>]   <span class="co"># control</span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>    set2 <span class="ot">&lt;-</span> <span class="fu">str_split_fixed</span>(c, <span class="st">&quot;-&quot;</span>, <span class="dv">2</span>)[<span class="dv">2</span>]   <span class="co"># treatment</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a></span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a>    output_folder <span class="ot">&lt;-</span> <span class="fu">paste0</span>(bg_dir, <span class="st">&quot;homer_motif_res_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2)</span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="fu">file.path</span>(output_folder, <span class="st">&quot;knownResults.txt&quot;</span>))) {</span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a>      <span class="fu">message</span>(<span class="st">&quot;HOMER results already exist for &quot;</span>, c, <span class="st">&quot;: skipped&quot;</span>)</span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a>      <span class="cf">next</span></span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a>    }</span>
+<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a></span>
+<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a>    <span class="co"># output files</span></span>
+<span id="cb7-38"><a href="#cb7-38" tabindex="-1"></a>    annotate_outfile <span class="ot">&lt;-</span> <span class="fu">file.path</span>(bg_dir, <span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_annot.txt&quot;</span>))    <span class="co"># annotatePeaks.pl</span></span>
+<span id="cb7-39"><a href="#cb7-39" tabindex="-1"></a>    diffexp_outfile  <span class="ot">&lt;-</span> <span class="fu">file.path</span>(bg_dir, <span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_output.txt&quot;</span>))   <span class="co"># getDiffExpression.pl</span></span>
+<span id="cb7-40"><a href="#cb7-40" tabindex="-1"></a></span>
+<span id="cb7-41"><a href="#cb7-41" tabindex="-1"></a>    <span class="co"># groups for getDiffExpression.pl: one label per replicate</span></span>
+<span id="cb7-42"><a href="#cb7-42" tabindex="-1"></a>    group1 <span class="ot">&lt;-</span> <span class="fu">rep</span>(set1, <span class="fu">length</span>(reps_control))     <span class="co"># control</span></span>
+<span id="cb7-43"><a href="#cb7-43" tabindex="-1"></a>    group2 <span class="ot">&lt;-</span> <span class="fu">rep</span>(set2, <span class="fu">length</span>(reps_treatment))   <span class="co"># treatment</span></span>
+<span id="cb7-44"><a href="#cb7-44" tabindex="-1"></a></span>
+<span id="cb7-45"><a href="#cb7-45" tabindex="-1"></a>    <span class="co"># convert the merged peak file to the HOMER format</span></span>
+<span id="cb7-46"><a href="#cb7-46" tabindex="-1"></a>    input_file1  <span class="ot">&lt;-</span> <span class="fu">file.path</span>(bg_dir, <span class="fu">paste0</span>(<span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot.csv&quot;</span>))</span>
+<span id="cb7-47"><a href="#cb7-47" tabindex="-1"></a>    output_file1 <span class="ot">&lt;-</span> <span class="fu">file.path</span>(bg_dir, <span class="fu">paste0</span>(<span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot_modify.txt&quot;</span>))</span>
+<span id="cb7-48"><a href="#cb7-48" tabindex="-1"></a></span>
+<span id="cb7-49"><a href="#cb7-49" tabindex="-1"></a>    <span class="fu">process_hotspot_file</span>(</span>
+<span id="cb7-50"><a href="#cb7-50" tabindex="-1"></a>      input_file1,</span>
+<span id="cb7-51"><a href="#cb7-51" tabindex="-1"></a>      output_file1</span>
+<span id="cb7-52"><a href="#cb7-52" tabindex="-1"></a>    )</span>
+<span id="cb7-53"><a href="#cb7-53" tabindex="-1"></a></span>
+<span id="cb7-54"><a href="#cb7-54" tabindex="-1"></a>    <span class="co"># 1. create one tag directory per replicate (in the BAM directory), only for this couple</span></span>
+<span id="cb7-55"><a href="#cb7-55" tabindex="-1"></a>    <span class="co">#    can take more than 30 min</span></span>
+<span id="cb7-56"><a href="#cb7-56" tabindex="-1"></a>    td_dirs <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb7-57"><a href="#cb7-57" tabindex="-1"></a>    <span class="cf">for</span> (cond <span class="cf">in</span> <span class="fu">c</span>(set1, set2)) {</span>
+<span id="cb7-58"><a href="#cb7-58" tabindex="-1"></a>      reps <span class="ot">&lt;-</span> <span class="cf">if</span> (cond <span class="sc">==</span> set1) reps_control <span class="cf">else</span> reps_treatment</span>
+<span id="cb7-59"><a href="#cb7-59" tabindex="-1"></a>      <span class="cf">for</span> (i <span class="cf">in</span> reps) {</span>
+<span id="cb7-60"><a href="#cb7-60" tabindex="-1"></a>        bam_rep <span class="ot">&lt;-</span> <span class="fu">file.path</span>(work_dir, <span class="fu">paste0</span>(cond, <span class="st">&quot;_&quot;</span>, i, <span class="st">&quot;.bam&quot;</span>))</span>
+<span id="cb7-61"><a href="#cb7-61" tabindex="-1"></a>        td_dir  <span class="ot">&lt;-</span> <span class="fu">file.path</span>(work_dir, <span class="fu">paste0</span>(<span class="st">&quot;TD_&quot;</span>, cond, <span class="st">&quot;_&quot;</span>, i))</span>
+<span id="cb7-62"><a href="#cb7-62" tabindex="-1"></a>        <span class="cf">if</span> (<span class="sc">!</span><span class="fu">file.exists</span>(bam_rep)) <span class="fu">stop</span>(<span class="st">&quot;Replicate BAM not found: &quot;</span>, bam_rep)</span>
+<span id="cb7-63"><a href="#cb7-63" tabindex="-1"></a>        <span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(td_dir)) {</span>
+<span id="cb7-64"><a href="#cb7-64" tabindex="-1"></a>          <span class="fu">system</span>(<span class="fu">paste</span>(<span class="fu">file.path</span>(homer_bin, <span class="st">&quot;makeTagDirectory&quot;</span>), td_dir, bam_rep, <span class="st">&quot;-format sam&quot;</span>))</span>
+<span id="cb7-65"><a href="#cb7-65" tabindex="-1"></a>        } <span class="cf">else</span> {</span>
+<span id="cb7-66"><a href="#cb7-66" tabindex="-1"></a>          <span class="fu">message</span>(<span class="st">&quot;Tag directory already exists: &quot;</span>, <span class="fu">basename</span>(td_dir))</span>
+<span id="cb7-67"><a href="#cb7-67" tabindex="-1"></a>        }</span>
+<span id="cb7-68"><a href="#cb7-68" tabindex="-1"></a>        td_dirs <span class="ot">&lt;-</span> <span class="fu">c</span>(td_dirs, td_dir)</span>
+<span id="cb7-69"><a href="#cb7-69" tabindex="-1"></a>      }</span>
+<span id="cb7-70"><a href="#cb7-70" tabindex="-1"></a>    }</span>
+<span id="cb7-71"><a href="#cb7-71" tabindex="-1"></a></span>
+<span id="cb7-72"><a href="#cb7-72" tabindex="-1"></a>    <span class="co"># 2. count tags per peak (annotatePeaks.pl)</span></span>
+<span id="cb7-73"><a href="#cb7-73" tabindex="-1"></a>    <span class="fu">run_annotate_peak</span>(homer_bin, work_dir, output_file1, mm, td_dirs, annotate_outfile)</span>
+<span id="cb7-74"><a href="#cb7-74" tabindex="-1"></a></span>
+<span id="cb7-75"><a href="#cb7-75" tabindex="-1"></a>    <span class="co"># 3. differential analysis (getDiffExpression.pl, DESeq2)</span></span>
+<span id="cb7-76"><a href="#cb7-76" tabindex="-1"></a>    <span class="fu">run_diff_expression</span>(</span>
+<span id="cb7-77"><a href="#cb7-77" tabindex="-1"></a>      homer_bin,</span>
+<span id="cb7-78"><a href="#cb7-78" tabindex="-1"></a>      work_dir,</span>
+<span id="cb7-79"><a href="#cb7-79" tabindex="-1"></a>      annotate_outfile,</span>
+<span id="cb7-80"><a href="#cb7-80" tabindex="-1"></a>      diffexp_outfile,</span>
+<span id="cb7-81"><a href="#cb7-81" tabindex="-1"></a>      group1,</span>
+<span id="cb7-82"><a href="#cb7-82" tabindex="-1"></a>      group2</span>
+<span id="cb7-83"><a href="#cb7-83" tabindex="-1"></a>    )</span>
 <span id="cb7-84"><a href="#cb7-84" tabindex="-1"></a></span>
-<span id="cb7-85"><a href="#cb7-85" tabindex="-1"></a>  <span class="fu">create_diff_peak_files</span>(<span class="at">input_path =</span> bg_dir, <span class="at">input_filename =</span> diff_out, <span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>,</span>
-<span id="cb7-86"><a href="#cb7-86" tabindex="-1"></a>                         <span class="at">chr =</span> <span class="st">&quot;Chr&quot;</span>, <span class="at">start =</span> <span class="st">&quot;Start&quot;</span>, <span class="at">end =</span> <span class="st">&quot;End&quot;</span>,</span>
-<span id="cb7-87"><a href="#cb7-87" tabindex="-1"></a>                         <span class="at">padj_cutoff =</span> <span class="fl">0.05</span>, <span class="at">l2fc_cutoff =</span> <span class="fl">0.5</span>,</span>
-<span id="cb7-88"><a href="#cb7-88" tabindex="-1"></a>                         <span class="at">output_prefix =</span> <span class="st">&quot;my_peaks&quot;</span>)</span>
-<span id="cb7-89"><a href="#cb7-89" tabindex="-1"></a></span>
-<span id="cb7-90"><a href="#cb7-90" tabindex="-1"></a>  <span class="fu">run_homer</span>(<span class="fu">file.path</span>(bg_dir, <span class="st">&quot;my_peaks_simple.bed&quot;</span>),</span>
-<span id="cb7-91"><a href="#cb7-91" tabindex="-1"></a>            <span class="fu">file.path</span>(bg_dir, <span class="st">&quot;homer_motif_res&quot;</span>), mm,</span>
-<span id="cb7-92"><a href="#cb7-92" tabindex="-1"></a>            <span class="fu">file.path</span>(homer_bin, <span class="st">&quot;findMotifsGenome.pl&quot;</span>),</span>
-<span id="cb7-93"><a href="#cb7-93" tabindex="-1"></a>            <span class="fu">paste</span>(<span class="st">&quot;-mknown&quot;</span>, <span class="fu">file.path</span>(mm_files_dir, <span class="st">&quot;all_cluster_motifs.motifs&quot;</span>),</span>
-<span id="cb7-94"><a href="#cb7-94" tabindex="-1"></a>                  <span class="st">&quot;-p&quot;</span>, numcores))</span>
-<span id="cb7-95"><a href="#cb7-95" tabindex="-1"></a></span>
-<span id="cb7-96"><a href="#cb7-96" tabindex="-1"></a>  homer_results_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(bg_dir, <span class="st">&quot;homer_motif_res&quot;</span>, <span class="st">&quot;knownResults.txt&quot;</span>)</span>
-<span id="cb7-97"><a href="#cb7-97" tabindex="-1"></a>}</span>
-<span id="cb7-98"><a href="#cb7-98" tabindex="-1"></a></span>
-<span id="cb7-99"><a href="#cb7-99" tabindex="-1"></a><span class="co"># ---- Step 4: footprinting ----------------------------------------------------</span></span>
-<span id="cb7-100"><a href="#cb7-100" tabindex="-1"></a><span class="fu">assign</span>(set1, <span class="fu">CutCount</span>(<span class="at">file =</span> <span class="fu">paste0</span>(set1, <span class="st">&quot;_AC_cutcount.bgr.gz&quot;</span>), <span class="at">count =</span> <span class="dv">1</span>, <span class="at">name =</span> set1))</span>
-<span id="cb7-101"><a href="#cb7-101" tabindex="-1"></a><span class="fu">assign</span>(set2, <span class="fu">CutCount</span>(<span class="at">file =</span> <span class="fu">paste0</span>(set2, <span class="st">&quot;_AC_cutcount.bgr.gz&quot;</span>), <span class="at">count =</span> <span class="dv">1</span>, <span class="at">name =</span> set2))</span>
-<span id="cb7-102"><a href="#cb7-102" tabindex="-1"></a></span>
-<span id="cb7-103"><a href="#cb7-103" tabindex="-1"></a>motifdb <span class="ot">&lt;-</span> <span class="fu">MotifDB</span>(</span>
-<span id="cb7-104"><a href="#cb7-104" tabindex="-1"></a>  <span class="at">motiflistfile =</span> <span class="fu">file.path</span>(mm_files_dir, <span class="fu">paste0</span>(<span class="st">&quot;motiflist_&quot;</span>, mm, <span class="st">&quot;_cluster.txt&quot;</span>)),</span>
-<span id="cb7-105"><a href="#cb7-105" tabindex="-1"></a>  <span class="at">directory     =</span> <span class="fu">file.path</span>(mm_files_dir, <span class="fu">paste0</span>(mm, <span class="st">&quot;_cluster_fimo&quot;</span>))</span>
-<span id="cb7-106"><a href="#cb7-106" tabindex="-1"></a>)</span>
-<span id="cb7-107"><a href="#cb7-107" tabindex="-1"></a></span>
-<span id="cb7-108"><a href="#cb7-108" tabindex="-1"></a>gfootoption <span class="ot">&lt;-</span> <span class="fu">GFootOption</span>(</span>
-<span id="cb7-109"><a href="#cb7-109" tabindex="-1"></a>  <span class="at">biasfile        =</span> <span class="fu">file.path</span>(bg_dir, <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_merged_withoutMap.csv&quot;</span>)),</span>
-<span id="cb7-110"><a href="#cb7-110" tabindex="-1"></a>  <span class="at">hexamer_pattern =</span> <span class="fu">paste0</span>(<span class="st">&quot;nuccode_&quot;</span>, mm, <span class="st">&quot;_6mer_{chr}.dat&quot;</span>)</span>
-<span id="cb7-111"><a href="#cb7-111" tabindex="-1"></a>)</span>
-<span id="cb7-112"><a href="#cb7-112" tabindex="-1"></a></span>
-<span id="cb7-113"><a href="#cb7-113" tabindex="-1"></a>couple   <span class="ot">&lt;-</span> <span class="fu">paste0</span>(set1, <span class="st">&quot;-&quot;</span>, set2)</span>
-<span id="cb7-114"><a href="#cb7-114" tabindex="-1"></a>motif_no <span class="ot">&lt;-</span> <span class="cf">switch</span>(mm, <span class="st">&quot;mm10&quot;</span> <span class="ot">=</span> <span class="dv">577</span>, <span class="st">&quot;hg38&quot;</span> <span class="ot">=</span> <span class="dv">636</span>)   <span class="co"># total number of motifs: do not change</span></span>
-<span id="cb7-115"><a href="#cb7-115" tabindex="-1"></a></span>
-<span id="cb7-116"><a href="#cb7-116" tabindex="-1"></a><span class="cf">for</span> (r <span class="cf">in</span> <span class="fu">seq</span>(<span class="dv">1</span>, motif_no, <span class="at">by =</span> <span class="dv">25</span>)) {</span>
-<span id="cb7-117"><a href="#cb7-117" tabindex="-1"></a>  gf <span class="ot">&lt;-</span> <span class="fu">GFoot</span>(</span>
-<span id="cb7-118"><a href="#cb7-118" tabindex="-1"></a>    <span class="at">control     =</span> <span class="fu">get</span>(set1),</span>
-<span id="cb7-119"><a href="#cb7-119" tabindex="-1"></a>    <span class="at">treatment   =</span> <span class="fu">get</span>(set2),</span>
-<span id="cb7-120"><a href="#cb7-120" tabindex="-1"></a>    <span class="at">sitefile    =</span> <span class="fu">file.path</span>(bg_dir, <span class="fu">paste0</span>(<span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot.csv&quot;</span>)),</span>
-<span id="cb7-121"><a href="#cb7-121" tabindex="-1"></a>    <span class="at">motifDB     =</span> motifdb,</span>
-<span id="cb7-122"><a href="#cb7-122" tabindex="-1"></a>    <span class="at">gfootoption =</span> gfootoption,</span>
-<span id="cb7-123"><a href="#cb7-123" tabindex="-1"></a>    <span class="at">outputdir   =</span> <span class="fu">paste0</span>(<span class="st">&quot;OUTPUT_&quot;</span>, couple, <span class="st">&quot;_&quot;</span>, r),</span>
-<span id="cb7-124"><a href="#cb7-124" tabindex="-1"></a>    <span class="at">cachedir    =</span> <span class="fu">paste0</span>(<span class="st">&quot;CACHE_&quot;</span>, couple, <span class="st">&quot;_&quot;</span>, r)</span>
-<span id="cb7-125"><a href="#cb7-125" tabindex="-1"></a>  )</span>
-<span id="cb7-126"><a href="#cb7-126" tabindex="-1"></a>  <span class="fu">run</span>(gf, <span class="at">graphout =</span> <span class="cn">TRUE</span>, <span class="at">yrange =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">2.2</span>, <span class="fl">1.0</span>), <span class="at">mc.cores =</span> numcores,</span>
-<span id="cb7-127"><a href="#cb7-127" tabindex="-1"></a>      <span class="at">range =</span> r<span class="sc">:</span><span class="fu">min</span>(r <span class="sc">+</span> <span class="dv">24</span>, motif_no), <span class="at">run_set =</span> couple)</span>
-<span id="cb7-128"><a href="#cb7-128" tabindex="-1"></a>  <span class="fu">gc</span>()</span>
-<span id="cb7-129"><a href="#cb7-129" tabindex="-1"></a>}</span>
-<span id="cb7-130"><a href="#cb7-130" tabindex="-1"></a></span>
-<span id="cb7-131"><a href="#cb7-131" tabindex="-1"></a><span class="co"># ---- Step 5: statistics and plots --------------------------------------------</span></span>
-<span id="cb7-132"><a href="#cb7-132" tabindex="-1"></a>merged_name <span class="ot">&lt;-</span> <span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_On_pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2,</span>
-<span id="cb7-133"><a href="#cb7-133" tabindex="-1"></a>                      <span class="st">&quot;_hotspot_footprint_depth_table_merged.csv&quot;</span>)</span>
-<span id="cb7-134"><a href="#cb7-134" tabindex="-1"></a><span class="fu">system</span>(<span class="fu">paste0</span>(<span class="st">&quot;find . -type f -name &#39;&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_On_pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2,</span>
-<span id="cb7-135"><a href="#cb7-135" tabindex="-1"></a>              <span class="st">&quot;_hotspot_footprint_depth_table.csv&#39; -exec tail -n +2 -q {} &#39;;&#39; &gt; &quot;</span>, merged_name))</span>
-<span id="cb7-136"><a href="#cb7-136" tabindex="-1"></a></span>
-<span id="cb7-137"><a href="#cb7-137" tabindex="-1"></a>dat <span class="ot">&lt;-</span> data.table<span class="sc">::</span><span class="fu">fread</span>(merged_name, <span class="at">header =</span> <span class="cn">FALSE</span>, <span class="at">data.table =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb7-138"><a href="#cb7-138" tabindex="-1"></a><span class="fu">colnames</span>(dat) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;num&quot;</span>, <span class="st">&quot;filename&quot;</span>, <span class="st">&quot;center&quot;</span>, <span class="st">&quot;logo&quot;</span>, <span class="st">&quot;motiflength&quot;</span>, <span class="st">&quot;motif&quot;</span>,</span>
-<span id="cb7-139"><a href="#cb7-139" tabindex="-1"></a>                   <span class="st">&quot;memeNo&quot;</span>, <span class="st">&quot;memeEntry&quot;</span>, <span class="st">&quot;lrmotif&quot;</span>, <span class="st">&quot;lrflanking&quot;</span>, <span class="st">&quot;lrtotal&quot;</span>,</span>
-<span id="cb7-140"><a href="#cb7-140" tabindex="-1"></a>                   <span class="st">&quot;fdepth1&quot;</span>, <span class="st">&quot;fdepth2&quot;</span>, <span class="st">&quot;meancc1&quot;</span>, <span class="st">&quot;meancc2&quot;</span>, <span class="st">&quot;numsite&quot;</span>)</span>
-<span id="cb7-141"><a href="#cb7-141" tabindex="-1"></a></span>
-<span id="cb7-142"><a href="#cb7-142" tabindex="-1"></a><span class="co"># Bagplot + D2 barplot + FDR barplot + CSV table with all values</span></span>
-<span id="cb7-143"><a href="#cb7-143" tabindex="-1"></a><span class="co"># </span><span class="al">NOTE</span><span class="co">: dataname1 = treatment, dataname2 = control</span></span>
-<span id="cb7-144"><a href="#cb7-144" tabindex="-1"></a><span class="fu">gen_bagplot_bagfoot2</span>(</span>
-<span id="cb7-145"><a href="#cb7-145" tabindex="-1"></a>  dat,</span>
-<span id="cb7-146"><a href="#cb7-146" tabindex="-1"></a>  <span class="at">dataname1             =</span> set2,</span>
-<span id="cb7-147"><a href="#cb7-147" tabindex="-1"></a>  <span class="at">dataname2             =</span> set1,</span>
-<span id="cb7-148"><a href="#cb7-148" tabindex="-1"></a>  <span class="at">include_homer_results =</span> <span class="sc">!</span><span class="fu">is.null</span>(homer_results_file),</span>
-<span id="cb7-149"><a href="#cb7-149" tabindex="-1"></a>  <span class="at">homer_results_file    =</span> homer_results_file</span>
-<span id="cb7-150"><a href="#cb7-150" tabindex="-1"></a>)</span></code></pre></div>
+<span id="cb7-85"><a href="#cb7-85" tabindex="-1"></a>    <span class="co"># 4. keep differential peaks only: BED file + table with log2FC, padj and p-value</span></span>
+<span id="cb7-86"><a href="#cb7-86" tabindex="-1"></a>    <span class="fu">setwd</span>(bg_dir)   <span class="co"># important: the files are created in the working directory</span></span>
+<span id="cb7-87"><a href="#cb7-87" tabindex="-1"></a>    diff_prefix <span class="ot">&lt;-</span> <span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_diff_peaks&quot;</span>)</span>
+<span id="cb7-88"><a href="#cb7-88" tabindex="-1"></a>    <span class="fu">create_diff_peak_files</span>(</span>
+<span id="cb7-89"><a href="#cb7-89" tabindex="-1"></a>      <span class="at">input_path     =</span> bg_dir,</span>
+<span id="cb7-90"><a href="#cb7-90" tabindex="-1"></a>      <span class="at">input_filename =</span> <span class="fu">basename</span>(diffexp_outfile),</span>
+<span id="cb7-91"><a href="#cb7-91" tabindex="-1"></a>      <span class="at">sep            =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>,</span>
+<span id="cb7-92"><a href="#cb7-92" tabindex="-1"></a>      <span class="at">chr            =</span> <span class="st">&quot;Chr&quot;</span>,</span>
+<span id="cb7-93"><a href="#cb7-93" tabindex="-1"></a>      <span class="at">start          =</span> <span class="st">&quot;Start&quot;</span>,</span>
+<span id="cb7-94"><a href="#cb7-94" tabindex="-1"></a>      <span class="at">end            =</span> <span class="st">&quot;End&quot;</span>,</span>
+<span id="cb7-95"><a href="#cb7-95" tabindex="-1"></a>      <span class="at">padj_cutoff    =</span> padj_cutoff,</span>
+<span id="cb7-96"><a href="#cb7-96" tabindex="-1"></a>      <span class="at">l2fc_cutoff    =</span> l2fc_cutoff,</span>
+<span id="cb7-97"><a href="#cb7-97" tabindex="-1"></a>      <span class="at">output_prefix  =</span> diff_prefix</span>
+<span id="cb7-98"><a href="#cb7-98" tabindex="-1"></a>    )</span>
+<span id="cb7-99"><a href="#cb7-99" tabindex="-1"></a></span>
+<span id="cb7-100"><a href="#cb7-100" tabindex="-1"></a>    <span class="co"># 5. motif enrichment on the differential peaks (findMotifsGenome.pl)</span></span>
+<span id="cb7-101"><a href="#cb7-101" tabindex="-1"></a>    <span class="co">#    can take more than 30 min</span></span>
+<span id="cb7-102"><a href="#cb7-102" tabindex="-1"></a>    input_bed   <span class="ot">&lt;-</span> <span class="fu">paste0</span>(bg_dir, diff_prefix, <span class="st">&quot;_simple.bed&quot;</span>)</span>
+<span id="cb7-103"><a href="#cb7-103" tabindex="-1"></a>    homer_exe   <span class="ot">&lt;-</span> <span class="fu">file.path</span>(homer_bin, <span class="st">&quot;findMotifsGenome.pl&quot;</span>)</span>
+<span id="cb7-104"><a href="#cb7-104" tabindex="-1"></a>    motif_file  <span class="ot">&lt;-</span> <span class="fu">system.file</span>(<span class="st">&quot;data&quot;</span>, <span class="st">&quot;all_cluster_motifs.motifs&quot;</span>, <span class="at">package =</span> <span class="st">&quot;bagfoot2&quot;</span>)</span>
+<span id="cb7-105"><a href="#cb7-105" tabindex="-1"></a>    extra_args1 <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">&quot;-mknown&quot;</span>, motif_file, <span class="st">&quot;-p&quot;</span>, numcores)</span>
+<span id="cb7-106"><a href="#cb7-106" tabindex="-1"></a></span>
+<span id="cb7-107"><a href="#cb7-107" tabindex="-1"></a>    <span class="fu">run_homer</span>(</span>
+<span id="cb7-108"><a href="#cb7-108" tabindex="-1"></a>      input_bed,</span>
+<span id="cb7-109"><a href="#cb7-109" tabindex="-1"></a>      output_folder,</span>
+<span id="cb7-110"><a href="#cb7-110" tabindex="-1"></a>      mm,</span>
+<span id="cb7-111"><a href="#cb7-111" tabindex="-1"></a>      homer_exe,</span>
+<span id="cb7-112"><a href="#cb7-112" tabindex="-1"></a>      extra_args1</span>
+<span id="cb7-113"><a href="#cb7-113" tabindex="-1"></a>    )</span>
+<span id="cb7-114"><a href="#cb7-114" tabindex="-1"></a>  }</span>
+<span id="cb7-115"><a href="#cb7-115" tabindex="-1"></a>}</span></code></pre></div>
 </div>
-<div id="citation" class="section level2">
-<h2>Citation</h2>
-<p>If you use BAGFOOT2, please cite the original BaGFoot method:</p>
-<p>Baek S, Goldstein I, Hager GL. Bivariate genomic footprinting detects
-changes in transcription factor activity. <em>Cell Reports</em>
-2017;19(8):1710–1722.</p>
+<div id="bagfoot2-processing-footprinting-and-tf-activity-inference" class="section level2">
+<h2>BAGFOOT2 Processing: Footprinting and TF Activity Inference</h2>
+<p>In the final step, BAGFOOT2 integrates all precomputed inputs to
+quantify transcription factor (TF) activity differences between
+conditions. For each condition pair, BAGFOOT2 performs
+sequence-bias–corrected footprinting over all genomic motif occurrences
+and summarizes the results using a bagplot and barplots.</p>
+<div id="input-objects" class="section level3">
+<h3>Input objects</h3>
+<p>For each condition, a <code>CutCount</code> object is created from
+the ATAC-seq BedGraph file (<code>*_AC_cutcount.bgr.gz</code>).</p>
+<p>These objects store the Tn5 cut profiles and are used as the control
+and treatment signals in the footprinting &amp; flanking accessibility
+analysis.</p>
+<p>In addition, BAGFOOT2 loads:</p>
+<ul>
+<li><p>MotifDB : archetype motif occurrence coordinates derived from a
+FIMO genome-wide scan. These files (mm10_files.tar.gz,
+hg38_files.tar.gz) are available here: <a href="https://doi.org/10.5281/zenodo.20782782" class="uri">https://doi.org/10.5281/zenodo.20782782</a>, and can be
+downloaded automatically with <code>ensure_motif_db()</code>.</p></li>
+<li><p>Merged hexamer bias table
+(<code>Hexamer_set1_set2_merged_withoutMap.csv</code>): used for
+sequence-bias correction.</p></li>
+<li><p><strong>Pooled hotspot file</strong>
+(<code>pooled_set1_set2_hotspot.csv</code>): merged peak regions
+defining the common universe of sites where footprint are
+calculated.</p></li>
+</ul>
 </div>
-<div id="session-info" class="section level2">
-<h2>Session info</h2>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; R version 4.3.3 (2024-02-29)</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Platform: x86_64-conda-linux-gnu (64-bit)</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Running under: Ubuntu 20.04.1 LTS</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; BLAS/LAPACK: /home/leslieco/miniconda3/envs/bagfoot2/lib/libopenblasp-r0.3.34.so;  LAPACK version 3.12.0</span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;  [1] LC_CTYPE=en_IL       LC_NUMERIC=C         LC_TIME=en_IL       </span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;  [4] LC_COLLATE=en_IL     LC_MONETARY=en_IL    LC_MESSAGES=en_IL   </span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;  [7] LC_PAPER=en_IL       LC_NAME=C            LC_ADDRESS=C        </span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; [10] LC_TELEPHONE=C       LC_MEASUREMENT=en_IL LC_IDENTIFICATION=C </span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; time zone: Asia/Jerusalem</span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; tzcode source: system (glibc)</span></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.62      </span></span>
-<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  [5] cachem_1.1.0    knitr_1.52      htmltools_0.5.9 rmarkdown_2.32 </span></span>
-<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;  [9] lifecycle_1.0.5 cli_3.6.6       sass_0.4.10     jquerylib_0.1.4</span></span>
-<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt; [13] compiler_4.3.3  tools_4.3.3     evaluate_1.0.5  bslib_0.12.0   </span></span>
-<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; [17] yaml_2.3.12     otel_0.2.0      rlang_1.3.0     jsonlite_2.0.0</span></span></code></pre></div>
+<div id="running-bagfoot2-by-motif-batches" class="section level3">
+<h3>Running BAGFOOT2 by motif batches</h3>
+<p>For each couple of conditions (e.g., <code>fed</code> vs
+<code>fasted</code>), BAGFOOT2 constructs a <code>GFootOption</code>
+object specifying:</p>
+<ul>
+<li><p>the merged hexamer bias file, and</p></li>
+<li><p>the hexamer index pattern
+(<code>nuccode_{genome}_6mer_{chr}.dat</code>).</p></li>
+</ul>
+<p>The nuccode files are generated automatically during the
+pre-processing step (hexamer table construction).</p>
+<p>The main footprinting routine is performed with the
+<code>GFoot()</code> function:</p>
+<ul>
+<li><p><code>control</code> and <code>treatment</code> correspond to the
+two <code>CutCount</code> objects,</p></li>
+<li><p><code>sitefile</code> points to the pooled hotspot file (merged
+peaks),</p></li>
+<li><p><code>motifDB</code> provides genomic coordinates of archetype
+motif occurrences,</p></li>
+<li><p><code>gfootoption</code> controls bias correction and hexamer
+handling,</p></li>
+<li><p><code>outputdir</code> and <code>cachedir</code> store
+intermediate and final results.</p></li>
+</ul>
+<p>To make the computation efficient, motifs are processed in
+<strong>batches of 25</strong>. The script automatically detects any
+existing <code>*_footprint_depth_table.csv</code> files and resumes from
+the next motif index if a previous run was interrupted. This restart
+mechanism is driven by the <code>start_motif</code> variable.</p>
+<p>The <code>run()</code> function applies GFoot to all motifs in the
+specified range, using:</p>
+<ul>
+<li><p><code>mc.cores</code> to parallelize over CPU cores,</p></li>
+<li><p><code>graphout = TRUE</code> to generate footprint
+plots,</p></li>
+<li><p><code>yrange</code> to harmonize the y-axis scale across
+motifs.</p></li>
+</ul>
+</div>
+<div id="flanking-and-central-accessibility" class="section level3">
+<h3>Flanking and central accessibility</h3>
+<p>For each motif occurrence, BAGFOOT2 quantifies:</p>
+<ul>
+<li><p>central accessibility: Tn5 cuts over the motif core, where a
+footprint may appear, and</p></li>
+<li><p>flanking accessibility: Tn5 cuts in the surrounding regions,
+providing a local background reference.</p></li>
+</ul>
+<p>These signals are integrated into three log2 ratios (treatment vs
+control):</p>
+<ul>
+<li><p>lrmotif — accessibility change at the motif center,</p></li>
+<li><p>lrflanking — accessibility change in the surrounding
+regions,</p></li>
+<li><p>lrtotal — combined statistic (motif + flanks), used to assess TF
+activity shifts.</p></li>
+</ul>
+<p>This flanking-versus-center framework ensures that footprint depth
+reflects true binding-dependent protection rather than broader chromatin
+accessibility changes.</p>
+</div>
+<div id="merging-footprint-tables" class="section level3">
+<h3>Merging footprint tables</h3>
+<p>Each batch produces a separate
+<code>*_footprint_depth_table.csv</code> file.</p>
+<p>After all batches are completed, these files are concatenated into a
+single merged table:</p>
+<ul>
+<li><code>*_hotspot_footprint_depth_table_leslie_merged.csv</code></li>
+</ul>
+<p>This table contains, for each motif:</p>
+<ul>
+<li><p>footprint depths in control and treatment (<code>fdepth1</code>,
+<code>fdepth2</code>),</p></li>
+<li><p>mean cut counts (<code>meancc1</code>,
+<code>meancc2</code>),</p></li>
+<li><p>log2 ratios derived from central and flanking accessibility
+(<code>lrmotif</code>, <code>lrflanking</code>,
+<code>lrtotal</code>),</p></li>
+<li><p>the number of motif sites used (<code>numsite</code>).</p></li>
+</ul>
+</div>
+<div id="visualization-and-integration-with-homer" class="section level3">
+<h3>Visualization and integration with HOMER</h3>
+<p>To summarize TF activity changes, BAGFOOT2 calls
+<code>gen_bagplot_bagfoot2()</code> function. This step:</p>
+<ul>
+<li><p>generates a <strong>bagplot</strong>, where each point
+corresponds to a motif/TF,</p></li>
+<li><p>highlights motifs with significant differential footprinting
+(based on q-values),</p></li>
+<li><p>generates <strong>barplots</strong> of the TFs with significant
+changes (FDR below the threshold and outside the bagplot fence), one
+panel for increased and one for decreased activity in the
+treatment,</p></li>
+<li><p>optionally annotates motifs using HOMER motif enrichment results
+based on archetype motifs (<code>knownResults.txt</code>), allowing the
+user to cross-reference footprint-based activity changes with motif
+enrichment p-values.</p></li>
+</ul>
+<p>The following files are generated, providing an overview of TFs that
+gain or lose activity between the two conditions:</p>
+<ul>
+<li><p>the <strong>bagplot</strong> (<code>*_bfoot2.pdf</code> and
+<code>*_bfoot2_zoomIn.pdf</code>),</p></li>
+<li><p>the <strong>barplots</strong> of the significant TFs, ranked by
+D2 (<code>*_maha_D2.pdf</code> / <code>.tiff</code>) and by FDR
+(<code>*_maha_padj.pdf</code> / <code>.tiff</code>),</p></li>
+<li><p>the <strong>CSV</strong> result table with all values for each
+motif (<code>*_bagfoot2_output.csv</code>).</p></li>
+</ul>
+<p>Note: <code>dataname1</code> must be the treatment and
+<code>dataname2</code> the control, so that the “increase” panel
+corresponds to the treatment.</p>
+<p>Finally, <code>sessionInfo()</code> is printed to record the R
+environment and package versions used in the analysis, ensuring full
+reproducibility of the BAGFOOT2 run.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">setwd</span>(bg_dir)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co"># one CutCount object per condition, from its BedGraph file</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="cf">for</span> (treat <span class="cf">in</span> all_set) {</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="fu">assign</span>(treat, <span class="fu">CutCount</span>(<span class="at">file  =</span> <span class="fu">paste0</span>(bg_dir, treat, <span class="st">&quot;_AC_cutcount.bgr.gz&quot;</span>),   <span class="co"># BedGraph file</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>                         <span class="at">count =</span> <span class="dv">1</span>,                                               <span class="co"># placeholder</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>                         <span class="at">name  =</span> treat))                                          <span class="co"># data name</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>}</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co"># motif database: archetype motif clusters (FIMO genome-wide scan)</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>motifdb_mm <span class="ot">&lt;-</span> <span class="fu">MotifDB</span>(</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="at">motiflistfile =</span> <span class="fu">paste0</span>(mm_files_dir, <span class="st">&quot;motiflist_&quot;</span>, mm, <span class="st">&quot;_cluster.txt&quot;</span>),   <span class="co"># list of motifs</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  <span class="at">directory     =</span> <span class="fu">paste0</span>(mm_files_dir, mm, <span class="st">&quot;_cluster_fimo&quot;</span>))               <span class="co"># directory of motif files</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>motif_no <span class="ot">&lt;-</span> <span class="cf">switch</span>(mm, <span class="st">&quot;mm10&quot;</span> <span class="ot">=</span> <span class="dv">577</span>, <span class="st">&quot;hg38&quot;</span> <span class="ot">=</span> <span class="dv">636</span>)   <span class="co"># total number of motifs, do not change</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="cf">for</span> (c <span class="cf">in</span> couples) {</span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">&quot;c -----------------------&gt;&quot;</span>, c))</span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  set1 <span class="ot">&lt;-</span> <span class="fu">str_split_fixed</span>(c, <span class="st">&quot;-&quot;</span>, <span class="dv">2</span>)[<span class="dv">1</span>]   <span class="co"># control</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>  set2 <span class="ot">&lt;-</span> <span class="fu">str_split_fixed</span>(c, <span class="st">&quot;-&quot;</span>, <span class="dv">2</span>)[<span class="dv">2</span>]   <span class="co"># treatment</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>  <span class="co"># HOMER results of this couple (used only if they exist)</span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>  homer_results_file <span class="ot">&lt;-</span> <span class="fu">paste0</span>(bg_dir, <span class="st">&quot;homer_motif_res_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;/knownResults.txt&quot;</span>)</span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>  use_homer_results  <span class="ot">&lt;-</span> <span class="fu">exists</span>(<span class="st">&quot;use_homer&quot;</span>) <span class="sc">&amp;&amp;</span> use_homer <span class="sc">&amp;&amp;</span> <span class="fu">file.exists</span>(homer_results_file)</span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>  gfootoption_couple <span class="ot">&lt;-</span> <span class="fu">GFootOption</span>(<span class="at">biasfile        =</span> <span class="fu">paste0</span>(<span class="st">&quot;Hexamer_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_merged_withoutMap.csv&quot;</span>),   <span class="co"># merged hexamer bias table</span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>                                    <span class="at">hexamer_pattern =</span> <span class="fu">paste0</span>(<span class="st">&quot;nuccode_&quot;</span>, mm, <span class="st">&quot;_6mer_{chr}.dat&quot;</span>))                     <span class="co"># nucleotide code files</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>  <span class="fu">setwd</span>(bg_dir)</span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a>  <span class="co"># restart: find the batches already done</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a>  output_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(bg_dir,</span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a>                             <span class="at">pattern   =</span> <span class="fu">glob2rx</span>(<span class="fu">paste0</span>(set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_On_pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2,</span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a>                                                        <span class="st">&quot;_hotspot_footprint_depth_table&quot;</span>, <span class="st">&quot;.csv&quot;</span>)),</span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a>                             <span class="at">recursive =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(output_files) <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a>    start_motif <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a>    <span class="co"># starting motif = last batch done (from the folder name) + 25</span></span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a>    start_motif <span class="ot">&lt;-</span> <span class="fu">dirname</span>(output_files) <span class="sc">%&gt;%</span>                  <span class="co"># directory name</span></span>
+<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a>      <span class="fu">str_split</span>(., <span class="st">&quot;</span><span class="sc">\\</span><span class="st">_&quot;</span>, <span class="at">simplify =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span>                <span class="co"># split by underscore</span></span>
+<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a>      <span class="fu">as.data.frame</span>(<span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a>      dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">tail</span>(<span class="fu">names</span>(.), <span class="dv">1</span>)) <span class="sc">%&gt;%</span>                     <span class="co"># keep the last column</span></span>
+<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a>      <span class="fu">mutate_if</span>(is.character, as.numeric) <span class="sc">%&gt;%</span>                  <span class="co"># convert to numeric</span></span>
+<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a>      max <span class="sc">+</span> <span class="dv">25</span>                                                 <span class="co"># last batch + 25</span></span>
+<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a>  }</span>
+<span id="cb8-45"><a href="#cb8-45" tabindex="-1"></a></span>
+<span id="cb8-46"><a href="#cb8-46" tabindex="-1"></a>  <span class="co"># footprinting by batches of 25 motifs</span></span>
+<span id="cb8-47"><a href="#cb8-47" tabindex="-1"></a>  <span class="cf">if</span> (start_motif <span class="sc">&lt;</span> motif_no) {</span>
+<span id="cb8-48"><a href="#cb8-48" tabindex="-1"></a>    <span class="cf">for</span> (r <span class="cf">in</span> <span class="fu">seq</span>(start_motif, motif_no, <span class="at">by =</span> <span class="dv">25</span>)) {</span>
+<span id="cb8-49"><a href="#cb8-49" tabindex="-1"></a>      <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">&quot;r ----------------------&gt;&quot;</span>, r))</span>
+<span id="cb8-50"><a href="#cb8-50" tabindex="-1"></a>      GFoot_obj <span class="ot">&lt;-</span> <span class="fu">GFoot</span>(<span class="at">control     =</span> <span class="fu">get</span>(set1),                                         <span class="co"># control data</span></span>
+<span id="cb8-51"><a href="#cb8-51" tabindex="-1"></a>                         <span class="at">treatment   =</span> <span class="fu">get</span>(set2),                                         <span class="co"># treatment data</span></span>
+<span id="cb8-52"><a href="#cb8-52" tabindex="-1"></a>                         <span class="at">sitefile    =</span> <span class="fu">paste0</span>(<span class="st">&quot;pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot.csv&quot;</span>),   <span class="co"># combined peaks</span></span>
+<span id="cb8-53"><a href="#cb8-53" tabindex="-1"></a>                         <span class="at">motifDB     =</span> motifdb_mm,                                        <span class="co"># FIMO motifs</span></span>
+<span id="cb8-54"><a href="#cb8-54" tabindex="-1"></a>                         <span class="at">gfootoption =</span> gfootoption_couple,                                <span class="co"># bias and hexamer files</span></span>
+<span id="cb8-55"><a href="#cb8-55" tabindex="-1"></a>                         <span class="at">outputdir   =</span> <span class="fu">paste0</span>(<span class="st">&quot;OUTPUT_&quot;</span>, c, <span class="st">&quot;_&quot;</span>, r),                      <span class="co"># output directory</span></span>
+<span id="cb8-56"><a href="#cb8-56" tabindex="-1"></a>                         <span class="at">cachedir    =</span> <span class="fu">paste0</span>(<span class="st">&quot;CACHE_&quot;</span>, c, <span class="st">&quot;_&quot;</span>, r))                       <span class="co"># cache directory</span></span>
+<span id="cb8-57"><a href="#cb8-57" tabindex="-1"></a></span>
+<span id="cb8-58"><a href="#cb8-58" tabindex="-1"></a>      res_couple <span class="ot">&lt;-</span> <span class="fu">run</span>(GFoot_obj, <span class="at">graphout =</span> <span class="cn">TRUE</span>, <span class="at">yrange =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="fl">2.2</span>, <span class="fl">1.0</span>), <span class="at">mc.cores =</span> numcores,</span>
+<span id="cb8-59"><a href="#cb8-59" tabindex="-1"></a>                        <span class="at">range =</span> r<span class="sc">:</span><span class="fu">min</span>(r <span class="sc">+</span> <span class="dv">24</span>, motif_no), <span class="at">run_set =</span> c)</span>
+<span id="cb8-60"><a href="#cb8-60" tabindex="-1"></a>      <span class="fu">gc</span>()   <span class="co"># garbage collector</span></span>
+<span id="cb8-61"><a href="#cb8-61" tabindex="-1"></a>    }</span>
+<span id="cb8-62"><a href="#cb8-62" tabindex="-1"></a>  }</span>
+<span id="cb8-63"><a href="#cb8-63" tabindex="-1"></a></span>
+<span id="cb8-64"><a href="#cb8-64" tabindex="-1"></a>  <span class="co"># merge the footprint tables of all batches (without header line)</span></span>
+<span id="cb8-65"><a href="#cb8-65" tabindex="-1"></a>  <span class="fu">setwd</span>(bg_dir)</span>
+<span id="cb8-66"><a href="#cb8-66" tabindex="-1"></a>  merge_output_leslie <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;find . -type f -name &#39;&quot;</span>,</span>
+<span id="cb8-67"><a href="#cb8-67" tabindex="-1"></a>                                set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_On_pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2,</span>
+<span id="cb8-68"><a href="#cb8-68" tabindex="-1"></a>                                <span class="st">&quot;_hotspot_footprint_depth_table.csv&#39; -exec tail -n +2 -q {} &#39;;&#39;&quot;</span>,</span>
+<span id="cb8-69"><a href="#cb8-69" tabindex="-1"></a>                                <span class="st">&quot; &gt; &quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_On_pooled_&quot;</span>,</span>
+<span id="cb8-70"><a href="#cb8-70" tabindex="-1"></a>                                set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_hotspot_footprint_depth_table_leslie_merged.csv&quot;</span>)</span>
+<span id="cb8-71"><a href="#cb8-71" tabindex="-1"></a>  <span class="fu">system</span>(merge_output_leslie)</span>
+<span id="cb8-72"><a href="#cb8-72" tabindex="-1"></a></span>
+<span id="cb8-73"><a href="#cb8-73" tabindex="-1"></a>  <span class="co"># read the merged table and add the header</span></span>
+<span id="cb8-74"><a href="#cb8-74" tabindex="-1"></a>  dat_leslie <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="fu">paste0</span>(bg_dir, set1, <span class="st">&quot;_&quot;</span>, set2, <span class="st">&quot;_On_pooled_&quot;</span>, set1, <span class="st">&quot;_&quot;</span>, set2,</span>
+<span id="cb8-75"><a href="#cb8-75" tabindex="-1"></a>                                  <span class="st">&quot;_hotspot_footprint_depth_table_leslie_merged.csv&quot;</span>),</span>
+<span id="cb8-76"><a href="#cb8-76" tabindex="-1"></a>                           <span class="at">quote =</span> <span class="st">&quot;</span><span class="sc">\&quot;</span><span class="st">&quot;</span>, <span class="at">comment.char =</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb8-77"><a href="#cb8-77" tabindex="-1"></a>  <span class="fu">colnames</span>(dat_leslie) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;num&quot;</span>, <span class="st">&quot;filename&quot;</span>, <span class="st">&quot;center&quot;</span>, <span class="st">&quot;logo&quot;</span>, <span class="st">&quot;motiflength&quot;</span>, <span class="st">&quot;motif&quot;</span>, <span class="st">&quot;memeNo&quot;</span>, <span class="st">&quot;memeEntry&quot;</span>,</span>
+<span id="cb8-78"><a href="#cb8-78" tabindex="-1"></a>                            <span class="st">&quot;lrmotif&quot;</span>, <span class="st">&quot;lrflanking&quot;</span>, <span class="st">&quot;lrtotal&quot;</span>, <span class="st">&quot;fdepth1&quot;</span>, <span class="st">&quot;fdepth2&quot;</span>, <span class="st">&quot;meancc1&quot;</span>, <span class="st">&quot;meancc2&quot;</span>, <span class="st">&quot;numsite&quot;</span>)</span>
+<span id="cb8-79"><a href="#cb8-79" tabindex="-1"></a></span>
+<span id="cb8-80"><a href="#cb8-80" tabindex="-1"></a>  <span class="co"># bagplot + barplots + CSV table with all values</span></span>
+<span id="cb8-81"><a href="#cb8-81" tabindex="-1"></a>  <span class="co"># </span><span class="al">NOTE</span><span class="co">: dataname1 = treatment, dataname2 = control (we plot treatment vs control)</span></span>
+<span id="cb8-82"><a href="#cb8-82" tabindex="-1"></a>  test_gen <span class="ot">&lt;-</span> <span class="fu">gen_bagplot_bagfoot2</span>(</span>
+<span id="cb8-83"><a href="#cb8-83" tabindex="-1"></a>    dat_leslie,</span>
+<span id="cb8-84"><a href="#cb8-84" tabindex="-1"></a>    <span class="at">dataname1               =</span> set2,   <span class="co"># treatment -&gt; &quot;increase&quot; panel</span></span>
+<span id="cb8-85"><a href="#cb8-85" tabindex="-1"></a>    <span class="at">dataname2               =</span> set1,   <span class="co"># control   -&gt; &quot;decrease&quot; panel</span></span>
+<span id="cb8-86"><a href="#cb8-86" tabindex="-1"></a>    <span class="at">qvaluethreshold_bagplot =</span> <span class="fl">0.05</span>,</span>
+<span id="cb8-87"><a href="#cb8-87" tabindex="-1"></a>    <span class="at">factor                  =</span> <span class="fl">1.5</span>,</span>
+<span id="cb8-88"><a href="#cb8-88" tabindex="-1"></a>    <span class="at">include_homer_results   =</span> use_homer_results,   <span class="co"># TRUE only if HOMER results exist</span></span>
+<span id="cb8-89"><a href="#cb8-89" tabindex="-1"></a>    <span class="at">homer_results_file      =</span> homer_results_file,</span>
+<span id="cb8-90"><a href="#cb8-90" tabindex="-1"></a>    <span class="at">pval_threshold_homer    =</span> <span class="fl">0.05</span></span>
+<span id="cb8-91"><a href="#cb8-91" tabindex="-1"></a>  )</span>
+<span id="cb8-92"><a href="#cb8-92" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Session info for reproducibility/debugging</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; R version 4.3.3 (2024-02-29)</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; Platform: x86_64-conda-linux-gnu (64-bit)</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; Running under: Ubuntu 20.04.1 LTS</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; BLAS/LAPACK: /home/leslieco/miniconda3/envs/bagfoot2/lib/libopenblasp-r0.3.34.so;  LAPACK version 3.12.0</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt;  [1] LC_CTYPE=en_IL       LC_NUMERIC=C         LC_TIME=en_IL       </span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt;  [4] LC_COLLATE=en_IL     LC_MONETARY=en_IL    LC_MESSAGES=en_IL   </span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="co">#&gt;  [7] LC_PAPER=en_IL       LC_NAME=C            LC_ADDRESS=C        </span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="co">#&gt; [10] LC_TELEPHONE=C       LC_MEASUREMENT=en_IL LC_IDENTIFICATION=C </span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="co">#&gt; time zone: Asia/Jerusalem</span></span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt; tzcode source: system (glibc)</span></span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.62      </span></span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="co">#&gt;  [5] cachem_1.1.0    knitr_1.52      htmltools_0.5.9 rmarkdown_2.32 </span></span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="co">#&gt;  [9] lifecycle_1.0.5 cli_3.6.6       sass_0.4.10     jquerylib_0.1.4</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="co">#&gt; [13] compiler_4.3.3  tools_4.3.3     evaluate_1.0.5  bslib_0.12.0   </span></span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="co">#&gt; [17] yaml_2.3.12     otel_0.2.0      rlang_1.3.0     jsonlite_2.0.0</span></span></code></pre></div>
+</div>
 </div>
 
 
