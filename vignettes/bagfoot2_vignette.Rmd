@@ -37,7 +37,7 @@ BAGFOOT2 integrates footprinting, flanking accessibility, robust outlier statist
 For every archetype motif, BAGFOOT2 computes the Tn5 sequence-bias-corrected footprint depth (FPD) and the flanking accessibility (FA) over all motif occurrences in peaks, in each condition, and their differences (ΔFPD, ΔFA).
 
 **Robust differential activity score.**
-Each motif is a point in the (ΔFA, ΔFPD) plane. BAGFOOT2 measures how far each motif lies from the bulk of motifs with a robust Mahalanobis distance (D2), estimated with the Minimum Covariance Determinant (MCD, `robustbase::covMcd()`). Unlike the classical covariance, the MCD is not distorted by the TFs that truly change, so they are not masked. P-values are derived from a finite-sample F-distribution approximation of the robust distances (Hardin & Rocke 2005; Green & Martin 2017, via `CerioliOutlierDetection`) and adjusted for multiple testing (Benjamini–Hochberg FDR).
+Each motif is a point in the (ΔFA, ΔFPD) plane. BAGFOOT2 scores how far each motif lies from the bulk of motifs with a robust Mahalanobis distance (D2; Minimum Covariance Determinant estimator), and gives each motif a p-value and a Benjamini–Hochberg FDR. A motif is reported as changed in the barplots if its FDR is below the threshold and it lies outside the bagplot fence.
 
 **Motif enrichment (optional).**
 BAGFOOT2 can identify differentially accessible peaks with HOMER (DESeq2) and run motif enrichment on them with the same archetype motifs. Enriched motifs are flagged in the results.
