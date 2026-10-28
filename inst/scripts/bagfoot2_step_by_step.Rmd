@@ -68,7 +68,7 @@ knitr::opts_knit$set(root.dir = bg_dir)
 
 For each condition:
 
-- a BedGraph file of Tn5 cut counts is created (duplicate reads removed),
+- a BedGraph file of Tn5 cut counts is created,
 - a hexamer (6-mer) bias table is generated, used to correct the Tn5 sequence bias,
 - the MACS2 peaks are converted to a standardized CSV table.
 

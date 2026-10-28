@@ -84,6 +84,14 @@ conda activate bagfoot2
 
 One merged, sorted and indexed BAM per condition, named `<condition><bam_suffix>` (default suffix `_merged.bam`), e.g. `fed_merged.bam`, `fasted_merged.bam`, each with its `.bai` index.
 
+Each merged BAM also needs a tab-separated SAMtools idxstats file named `<BAM file>.csv`, used to count reads:
+
+```{bash, eval=FALSE}
+samtools idxstats fed_merged.bam > fed_merged.bam.csv
+```
+
+PCR duplicates must be removed beforehand (e.g. Picard MarkDuplicates).
+
 Chromosome names must be `chr`-prefixed (`chr1`, `chr2`, …).
 
 ### 2. Peak directory (`--peak_dir`)
@@ -162,7 +170,7 @@ knitr::kable(
                     "Output directory (created if needed)",
                     "Motif files directory",
                     "Condition names (file prefixes)",
-                    "mm9, mm10, hg18, hg19 or hg38",
+                    "mm10 or hg38 (motif files provided); other genomes need your own motif files (--mm_files_dir)",
                     "Suffix of merged BAM files",
                     "Suffix of peak files",
                     "Number of CPU cores",
@@ -202,11 +210,15 @@ For each chromosome, nuccode files (`nuccode_<genome>_6mer_<chr>.dat`) encode th
 
 #### 2. BedGraph files
 
-For each condition, a genome-wide cut-count BedGraph (`<condition>_AC_cutcount.bgr.gz`) is created. Reads are shifted to correct the Tn5 offset (+4 bp on the positive strand, −5 bp on the negative strand) and duplicates are removed.
+For each condition, a genome-wide cut-count BedGraph (`<condition>_AC_cutcount.bgr.gz`) is created from the merged BAM. Cut sites are placed at the 5′ end of each read, and fragments longer than 1 kb are excluded.
+
+<!-- TODO(Leslie/Ido): makeCutCountBAMWithName() is called with its default atac = FALSE,
+so the BedGraph is NOT shifted for the Tn5 offset (only the hexamer table is, with atac = TRUE).
+Decide whether to add atac = TRUE (CLI, Rmd) and then describe the shift here. -->
 
 #### 3. Hexamer bias table
 
-For each condition, BAGFOOT2 builds a hexamer table (`Hexamer_<condition>_<genome>_withoutMap.txt`). For every 6-mer, it:
+For each condition, BAGFOOT2 builds a hexamer table (`Hexamer_<condition>_<genome>_withoutMap.txt`). With `atac = TRUE`, cut sites are shifted to correct the Tn5 offset (+4 bp on the positive strand, −5 bp on the negative strand). For every 6-mer, it:
 
 - counts its genomic occurrences (`GenomicPositionCount`),
 - sums the observed Tn5 cuts at these positions (`ObCuts`).
@@ -227,7 +239,7 @@ MACS2 peaks are converted to a standardized table (`<condition>_peaks.csv`).
 knitr::kable(
   data.frame(
     Step = c("Nuccode files",
-             "BedGraph (Tn5 offset corrected)",
+             "BedGraph",
              "Hexamer table",
              "Peak reformatting"),
     `Output (per condition)` = c(
@@ -280,7 +292,7 @@ All batch tables are merged into one table, with one row per motif, containing:
 
 - footprint depths in control and treatment (`fdepth1`, `fdepth2`),
 - mean cut counts (`meancc1`, `meancc2`),
-- log-ratio accessibility statistics (`lrmotif`, `lrflanking`, `lrtotal`),
+- log2 ratios of cuts, treatment vs control, at the motif, in the flanks and in the whole window (`lrmotif`, `lrflanking`, `lrtotal`),
 - the number of motif sites (`numsite`).
 
 BAGFOOT2 then:
